@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<?xml-stylesheet type='text/xsl' href='rfc2629.xslt' ?>
+<!-- Some of the more generally applicable PIs that most I-Ds might want to use -->
+<!-- Try to enforce the ID-nits conventions and DTD validity -->
+<?rfc strict="yes" ?>
+<!-- Items used when reviewing the document -->
+<?rfc comments="no" ?>
+<!-- Controls display of <cref> elements -->
+<?rfc inline="no" ?>
+<!-- When no, put comments at end in comments section,
+                                 otherwise, put inline -->
+<?rfc editing="no" ?>
+<!-- When yes, insert editing marks: editing marks consist of a
+                                 string such as <29> printed in the blank line at the
+                                 beginning of each paragraph of text. -->
+<!-- Create Table of Contents (ToC) and set some options for it.
+         Note the ToC may be omitted for very short documents,but idnits insists on a ToC
+         if the document has more than 15 pages. -->
+<?rfc toc="yes"?>
+<?rfc tocompact="yes"?>
+<!-- If "yes" eliminates blank lines before main section entries. -->
+<?rfc tocdepth="3"?>
+<!-- Sets the number of levels of sections/subsections... in ToC -->
+<!-- Choose the options for the references.
+         Some like symbolic tags in the references (and citations) and others prefer
+         numbers. The RFC Editor always uses symbolic tags.
+         The tags used are the anchor attributes of the references. -->
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes" ?>
+<!-- If "yes", causes the references to be sorted in order of tags.
+                                 This doesn't have any effect unless symrefs is "yes" also. -->
+<!-- These two save paper: Just setting compact to "yes" makes savings by not starting each
+         main section on a new page but does not omit the blank lines between list items.
+         If subcompact is also "yes" the blank lines between list items are also omitted. -->
+<?rfc compact="yes" ?>
+<?rfc subcompact="no" ?>
+<!-- end of list of popular I-D processing instructions -->
+<!-- end of list of processing instructions -->
+<rfc category="std" docName="draft-baker-rtgwg-multihoming-architecture-00"
+     ipr="trust200902">
+  <front>
+    <title abbrev="IPv6 Routing Architecture">An Architecture for IPv6
+    Source/Destination Routing</title>
+
+    <author fullname="Fred Baker" initials="F.J." surname="Baker">
+      <organization>Cisco Systems</organization>
+
+      <address>
+        <postal>
+          <street/>
+
+          <city>Santa Barbara</city>
+
+          <code>93117</code>
+
+          <region>California</region>
+
+          <country>USA</country>
+        </postal>
+
+        <email>fred@cisco.com</email>
+      </address>
+    </author>
+
+    <date/>
+
+    <area>Routing Area</area>
+
+    <workgroup>Routing Working Group</workgroup>
+
+    <abstract>
+      <t>Alia Atlas has requested that an architecture for Source/Destination
+      routing be written. This is one attempt at such a document.</t>
+    </abstract>
+
+    <!--
+		<note title="Foreword">
+		</note>
+		-->
+
+    <!--
+      <texttable anchor="table_example" title="A Very Simple Table">
+      <preamble>Tables use ttcol to define column headers and widths.
+      Every cell then has a &quot;c&quot; element for its content.</preamble>
+          <ttcol align="center">ttcol #1</ttcol>
+                                    <ttcol align="center">ttcol #2</ttcol>
+                      <c>c #1</c>		<c>c #2</c>
+                      <c>c #3</c>		<c>c #4</c>
+                      <c>c #5</c>		<c>c #6</c>
+      <postamble>which is a very simple example.</postamble>
+      </texttable>
+    -->
+  </front>
+
+  <middle>
+    <!--
+      <t>There are multiple list styles: "symbols", "letters", "numbers",
+"hanging", "format", etc.</t>
+      <t>
+	<list style="symbols">
+	    <t>First bullet</t>
+	    <t>Second bullet</t>
+	</list>
+     </t>
+-->
+
+    <!--
+<figure anchor="reference" title="Figure">
+<artwork align="center">
+<![CDATA[
+	ASCII artwork goes here...
+]]>
+</artwork>
+</figure>
+-->
+
+    <section title="Introduction">
+      <t>This note attempts to encompass a complete architecture for routing
+      in <xref target="RFC2460">IPv6</xref> Multihoming. It is not a new
+      topic; the IETF has thought about it in the past, and documented that
+      thought in at least<list style="symbols">
+          <t><xref target="RFC1122">Requirements for Internet Hosts -
+          Communication Layers</xref>,</t>
+
+          <t><xref target="RFC1123">Requirements for Internet Hosts -
+          Application and Support</xref>,</t>
+
+          <t><xref target="RFC3582">Goals for IPv6 Site-Multihoming
+          Architectures</xref>,</t>
+
+          <t><xref target="RFC4116">IPv4 Multihoming Practices and
+          Limitations</xref>,</t>
+
+          <t><xref target="RFC4218">Threats Relating to IPv6 Multihoming
+          Solutions</xref>,</t>
+
+          <t><xref target="RFC4219">Things Multihoming in IPv6 (MULTI6)
+          Developers Should Think About</xref>, and</t>
+
+          <t><xref target="RFC7157">IPv6 Multihoming without Network Address
+          Translation</xref>.</t>
+        </list></t>
+
+      <t>Some of those documents are quite dated. However, the definitions
+      they give and the questions they ask remain valid.</t>
+
+      <section title="Requirements Language">
+        <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+        "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+        document are to be interpreted as described in <xref
+        target="RFC2119"/>.</t>
+      </section>
+    </section>
+
+    <section anchor="L3" title="Internet layer (IPv6)">
+      <t/>
+
+      <section anchor="L3-sadr" title="SADR forwarding (router)">
+        <t>A SADR Router is a router that makes routing and forwarding
+        decisions based on both the source and destination addresses in an IP
+        packet.</t>
+
+        <t>There are at least three ways one could build the forwarding plane:
+        use the source address to select a destination Forwarding Information
+        Base (FIB), use the destination address to select a source address FIB
+        or filter, or use the two as a combined key in the same mechanism to
+        find a source/destination prefix pair in the FIB.</t>
+
+        <t>The first two are well understood; follow a longest-match-first
+        rule on the source or destination address in a radix tree or other
+        type of database, and do so again with the other address.</t>
+
+        <t>Algorithms exist for the third, such as <xref target="PATRICIA"/>;
+        a potentially discontiguous bit pattern (the source and destination
+        address) is analyzed to determine what bits are most important at any
+        given stage in the lookup, and the lookup trie is organized
+        accordingly. TCAMs, of course, look at the entire lookup key
+        simultaneously, and are therefore another solution to the third case.
+        The counterpart to "longest match first" in such an algorithm is "most
+        specific match first".</t>
+
+        <t>An important use case (<xref
+        target="I-D.baker-rtgwg-src-dst-routing-use-cases"/>) for
+        source/destination routing is in egress routing. Egress routing is
+        essentially an enterprise or campus technology that presumes several
+        default routes in the network associated with the various prefixes in
+        use, and follows the default route for the relevant source prefix to
+        an egress to an upstream network. In that formulation, it is a
+        degenerate algorithm, perhaps best described as "source-specific"
+        routing, as the actual destination (as long is it is not local, which
+        would match a more specific route) is irrelevant - much as the source
+        address is irrelevant in traditional destination routing.</t>
+
+        <t>Other use cases, of which there are several, provide for the
+        possibility of following one of several paths to the same destination
+        based on the source prefix selected. That can be implemented as a set
+        of default routes with additional more-specific routes.</t>
+      </section>
+
+      <section anchor="L3-addressing"
+               title="Intelligent source address selection for a given destination">
+        <t>Source address selection in IPv6 has been a challenge. The biggest
+        single part of the challenge is that the host has no real
+        understanding of the network it finds itself in; at best, it might
+        know important parts of recent path state, or what has historically
+        worked and some measurements of how well. Unless the host has
+        configuration, history, or clairvoyance, it has no provably correct
+        mechanism with which to make a selection.</t>
+
+        <t>Existing RFCs on the topic, notably <xref target="RFC6724"/>, seek
+        to avoid address formats that have undesirable characteristics, such
+        as indicating the use of network address translation when an
+        untranslated path is available, using technologies that have not
+        worked well in the Internet, or using technologies that are
+        politically incorrect. Having eschewed the obviously bad choices, they
+        then recommend using the source address most similar to the
+        destination, on the premise that this should minimize path length. The
+        advice is probably generally good, but may also be suboptimal in
+        individual cases.</t>
+      </section>
+
+      <section anchor="L3-host-ICMP"
+               title="Reacting to timeouts and ICMP messages">
+        <t>When a packet does something other than follow the most obvious
+        path to its destination and arrive, the Internet Architecture
+        generally expects the router or middleware discarding it to inform the
+        sender why not. It does so using the <xref target="RFC4443">Internet
+        Control Message Protocol</xref>.</t>
+
+        <t>There are a number of cases in which that general dictum is not
+        followed; link layer corruption may make the packet unintelligible, so
+        that no system actually receives it to choose to drop it, the system
+        dropping the packet may be configured to not send, or to rate limit
+        the rate at which it sends, ICMP messages, and a filter en route may
+        prevent the ICMP message from arriving. In such cases, the sender is
+        left to intuit the failure from a timeout and take such corrective
+        action as may be required.</t>
+
+        <t>In a network with one prefix, the recovery action is simple: either
+        retransmit, or inform the application that the session failed.</t>
+
+        <t>In a network with more than one prefix (which might mean "has both
+        an IPv4 and an IPv6 prefix", "has IPv4 or IPv6 prefixes on different
+        interfaces", or "has more than one prefix, IPv4 or IPv6, on the same
+        interface"), one alternative to simple retransmission using the same
+        source address is to retransmit using a different source address.
+        <xref target="RFC6555">Happy Eyeballs</xref> provides a relatively
+        sophisticated way to accomplish that; in the simplest case, the socket
+        API can simply select a different one.</t>
+      </section>
+
+      <section anchor="L3-host-Next-Hop"
+               title="Intelligent first-hop selection (host)">
+        <t><xref target="I-D.ietf-6man-multi-homed-host"/> addresses the
+        question of first hop selection by a host. This is a routing question
+        being answered by a system that in the general case has little
+        knowledge of network routing. However, it does know what addresses it
+        is using, on what interfaces, and how it obtained them. In a network
+        using DHCP/DHCPv6, it knows that it can use as its first hop router a
+        router on the interface the source address is associated with, which
+        it learns by observing Router Advertisements, and it may have been
+        given an ICMP Redirect to a different router. In a network using <xref
+        target="RFC4862">IPv6 Stateless Address Autoconfiguration</xref> (in
+        any of its variants), it knows what router advertised the prefix to
+        it, and can use that as a first hop router.</t>
+      </section>
+
+      <section anchor="L3-ephemeral-addresses"
+               title="Deal with addresses being ephemeral, interface state and interfaces appearing / disappearing">
+        <t/>
+      </section>
+    </section>
+
+    <section anchor="Routing" title="Routing layer">
+      <t/>
+
+      <section anchor="Routing-Protocol"
+               title="Routing protocol for source/destination routing">
+        <t>A Source/Destination routing protocol is a protocol that exchanges
+        the information necessary for the calculation of a SADR FIB, and then
+        calculates it. No currently-deployed protocol implements SADR routing
+        at this point, although there are experiments in progress. <xref
+        target="I-D.baker-ipv6-isis-dst-src-routing">IPv6 Source/Destination
+        Routing using IS-IS</xref>, <xref
+        target="I-D.xu-src-dst-bgp">Source/Destination Routing Using
+        BGP-4</xref>, <xref
+        target="I-D.boutier-babel-source-specific">Source-Specific Routing in
+        Babel</xref>, and <xref target="RFC7788">Home Networking Control
+        Protocol</xref> are examples of source/destination routing
+        protocols.</t>
+      </section>
+    </section>
+
+    <section anchor="L4" title="Transport layer">
+      <t/>
+
+      <section anchor="L4-path-fail" title="Handle failure in one path">
+        <t/>
+      </section>
+
+      <section anchor="L4-load-share" title="Share load across multiple paths">
+        <t/>
+      </section>
+
+      <section anchor="L4-path-restore"
+               title="Bring up path again after failure">
+        <t/>
+      </section>
+    </section>
+
+    <section anchor="L5" title="Session layer">
+      <t/>
+
+      <section anchor="L5-session"
+               title="Recover session e.g. moving from home to office">
+        <t/>
+      </section>
+    </section>
+
+    <section anchor="IANA" title="IANA Considerations">
+      <t>This memo asks the IANA for no new parameters.</t>
+    </section>
+
+    <section anchor="Security" title="Security Considerations">
+      <t/>
+
+      <section anchor="Privacy" title="Privacy Considerations">
+        <t/>
+      </section>
+    </section>
+
+    <section anchor="Acknowledgements" title="Acknowledgements">
+      <t>The original outline was suggested by Ole Troan.</t>
+    </section>
+  </middle>
+
+  <back>
+    <!-- references split to informative and normative -->
+
+    <references title="Normative References">
+      <?rfc include="reference.RFC.1122" ?>
+
+      <?rfc include="reference.RFC.1123" ?>
+
+      <?rfc include="reference.RFC.2119"?>
+
+      <?rfc include="reference.RFC.2460"?>
+
+      <?rfc include="reference.RFC.3582" ?>
+
+      <?rfc include="reference.RFC.4116" ?>
+
+      <?rfc include="reference.RFC.4218" ?>
+
+      <?rfc include="reference.RFC.4219" ?>
+
+      <?rfc include="reference.RFC.7157" ?>
+    </references>
+
+    <references title="Informative References">
+      <?rfc include="reference.I-D.baker-ipv6-isis-dst-src-routing" ?>
+
+      <?rfc include="reference.I-D.baker-rtgwg-src-dst-routing-use-cases" ?>
+
+      <?rfc include="reference.I-D.boutier-babel-source-specific" ?>
+
+      <?rfc include="reference.I-D.ietf-6man-multi-homed-host" ?>
+
+      <?rfc include="reference.I-D.ietf-mif-mpvd-arch" ?>
+
+      <?rfc include="reference.I-D.ietf-mptcp-experience" ?>
+
+      <?rfc include="reference.I-D.ietf-rtgwg-dst-src-routing" ?>
+
+      <?rfc include="reference.I-D.xu-src-dst-bgp" ?>
+
+      <?rfc include="reference.RFC.4443" ?>
+
+      <?rfc include="reference.RFC.4862" ?>
+
+      <?rfc include="reference.RFC.6555" ?>
+
+      <?rfc include="reference.RFC.6724" ?>
+
+      <?rfc include="reference.RFC.7788" ?>
+
+      <reference anchor="PATRICIA">
+        <front>
+          <title>Practical Algorithm to Retrieve Information Coded in
+          Alphanumeric</title>
+
+          <author fullname="D.R. Morrison" initials="D.R." surname="Morrison">
+            <organization>Association for Computing Machinery</organization>
+          </author>
+
+          <date month="October" year="1968"/>
+        </front>
+
+        <seriesInfo name="Journal of the ACM" value="15(4) pp514-534"/>
+
+        <format target="http://www.csse.monash.edu.au/~lloyd/tildeAlgDS/Tree/PATRICIA/"
+                type="HTML"/>
+      </reference>
+    </references>
+
+    <section anchor="log" title="Change Log">
+      <t><list style="hanging">
+          <t hangText="Initial Version:">June 2016</t>
+        </list></t>
+    </section>
+  </back>
+</rfc>

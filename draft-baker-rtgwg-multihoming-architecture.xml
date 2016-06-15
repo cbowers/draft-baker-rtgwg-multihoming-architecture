@@ -40,29 +40,51 @@
 <rfc category="std" docName="draft-baker-rtgwg-multihoming-architecture-00"
      ipr="trust200902">
   <front>
-    <title abbrev="IPv6 Routing Architecture">An Architecture for IPv6
-    Source/Destination Routing</title>
+    <title abbrev="">Enterprise Routing Requirements to Support Multihoming using 
+	Provider-Assigned Addresses without NAT </title>
 
     <author fullname="Fred Baker" initials="F.J." surname="Baker">
       <organization>Cisco Systems</organization>
-
       <address>
         <postal>
           <street/>
-
           <city>Santa Barbara</city>
-
           <code>93117</code>
-
           <region>California</region>
-
           <country>USA</country>
         </postal>
-
         <email>fred@cisco.com</email>
       </address>
     </author>
 
+    <author fullname="Chris Bowers" initials="C." surname="Bowers">
+      <organization>Juniper Networks</organization>
+      <address>
+        <postal>
+          <street/>
+          <city>Sunnyvale</city>
+          <code>94089</code>
+          <region>California</region>
+          <country>USA</country>
+        </postal>
+        <email>cbowers@juniper.net</email>
+      </address>
+    </author>
+	
+    <author fullname="Jen Linkova" initials="J." surname="Linkova">
+      <organization>Google</organization>
+      <address>
+        <postal>
+          <street/>
+          <city>Mountain View</city>
+          <code>94043</code>
+          <region>California</region>
+          <country>USA</country>
+        </postal>
+        <email>furry@google.com</email>
+      </address>
+    </author>
+	
     <date/>
 
     <area>Routing Area</area>
@@ -70,53 +92,22 @@
     <workgroup>Routing Working Group</workgroup>
 
     <abstract>
-      <t>Alia Atlas has requested that an architecture for Source/Destination
-      routing be written. This is one attempt at such a document.</t>
+      <t>asdf s
+	  
+	  
+	  </t>
     </abstract>
 
-    <!--
-		<note title="Foreword">
-		</note>
-		-->
-
-    <!--
-      <texttable anchor="table_example" title="A Very Simple Table">
-      <preamble>Tables use ttcol to define column headers and widths.
-      Every cell then has a &quot;c&quot; element for its content.</preamble>
-          <ttcol align="center">ttcol #1</ttcol>
-                                    <ttcol align="center">ttcol #2</ttcol>
-                      <c>c #1</c>		<c>c #2</c>
-                      <c>c #3</c>		<c>c #4</c>
-                      <c>c #5</c>		<c>c #6</c>
-      <postamble>which is a very simple example.</postamble>
-      </texttable>
-    -->
   </front>
 
   <middle>
-    <!--
-      <t>There are multiple list styles: "symbols", "letters", "numbers",
-"hanging", "format", etc.</t>
-      <t>
-	<list style="symbols">
-	    <t>First bullet</t>
-	    <t>Second bullet</t>
-	</list>
-     </t>
--->
 
-    <!--
-<figure anchor="reference" title="Figure">
-<artwork align="center">
-<![CDATA[
-	ASCII artwork goes here...
-]]>
-</artwork>
-</figure>
--->
 
-    <section title="Introduction">
-      <t>This note attempts to encompass a complete architecture for routing
+<section title="Introduction">
+<t> 
+
+
+This note attempts to encompass a complete architecture for routing
       in <xref target="RFC2460">IPv6</xref> Multihoming. It is not a new
       topic; the IETF has thought about it in the past, and documented that
       thought in at least<list style="symbols">
@@ -152,6 +143,235 @@
         target="RFC2119"/>.</t>
       </section>
     </section>
+
+
+<section anchor="sec_enterprise_req" title="Enterprise Multihoming Requirements">
+<t> 
+asdf
+</t>
+
+<section anchor="sec_provider_assigned" title="Provider-assigned addresses">
+<t> We want to allow multi-homing to more than two service providers. So mechanism should 
+be general enough to allow multi-homing to an aribitrary number of service providers. However,
+from a practical point of view, we would expect most cases to be 
+dual-homing to just two providers. 
+</t>
+<t> We also assume that the provider-assigned addresses from a single provider can be
+represented as a small number of prefixes.  The majority will be a single prefix per provider, but 
+we allow for the possibility that a provider assigns mulitple prefixes to a site.  
+</t>
+
+<t> With these two assumptions, we expect most cases to have two provider-assigned
+prefixes, one for each provider. The worst case might involve ten provider-assigned
+prefixes used to connect to four different service providers.  
+</t>
+
+</section>
+
+<section anchor="sec_no_nat" title="No NAT or NPTv6">
+<t> 
+
+</t>
+</section>
+
+
+<section anchor="sec_no_topology_limitations" title="No limitations site network topology ">
+<t> 
+
+</t>
+</section>
+
+<section anchor="sec_incremental_deployment" title="Benefit from incremental deployment">
+<t> 
+
+</t>
+</section>
+
+<section anchor="sec_not_worse" title="Multihomed network should not function worse than non-multihomed network, even in the presence of failures ">
+<t> 
+  
+</t>
+</section>
+
+<section anchor="sec_external_session_initiation" title="External and internal session initiation">
+<t> A external host should be able to initiate a session with a host internal to the site.  
+
+</t>
+</section>
+
+<section anchor="sec_uplinks_to_isps" title="Uplinks to ISPs">
+<t> The most common scenario will be where the interfaces between site exit routers and ISPs 
+will correspond to different physical interfaces.
+</t>  
+
+<t> There are however scenarios where 
+a single physical interface from an ISP is logically partitioned using, for example, VLAN tagging.
+In this case, the different logical sub-interfaces may have different source address ingress filtering rules 
+applied, so the different sub-interfaces would need to be treated as if they are multi-homed to different ISPs.  
+The solution should accomodate the common scenario, as well more complex scenarios involving physical 
+interfaces divided into sub-interfaces.
+</t>   
+
+<t> There are also scenarios where different site exit interfaces connect to the same ISP, which 
+will apply the same source address ingress filtering rules to the traffic on those interfaces.
+The solution should accomodate this scenario as well. 
+</t> 
+
+</section>
+
+<section anchor="sec_extent_of_site" title="Extent of enterprise site">
+<t> The most common scenario will be a single physical site connecting to two upstream providers.
+However, an enterprise site may interconnect physical sites using leased lines or tunnels.  From 
+a routing point of view, several physical sites may be combined into a single enterprise network site.
+The solution should accomodate the more common scenario, as well as more complex scenarios, as long 
+as they are consistent with other restrictions.
+</t>
+</section>
+
+<section anchor="sec_complexity_of_routing" title="Complexity of routing to upstream ISPs">
+<t>  The most common multihoming scenario will be for the enterprise network site to point
+a default route towards each of its upstream ISPs.  
+
+An enterprise network site which has connections to multiple ISPs may run eBGP with each of those ISPs.
+If the ISPs distribute all or some of the Internet routing table over the eBGP sessions, then the enterprise
+site can 
+
+
+</t>
+</section>
+
+<section anchor="sec_existing_IGP" title="Enterprise network uses existing IGP within the site ">
+<t>  
+OSPFv3, ISIS, or RIPng with some potential enhancements on routers that do source address dependent routing.
+</t>
+</section>
+
+<section anchor="sec_load_sharing" title="Load sharing  ">
+<t> When uplinks to multiple ISPs are working, it should be possible for traffic
+from the site use multiple uplinks.  This could take the form of different 
+flows from the same host using different uplinks. Or it could take the form 
+of all traffic from some hosts using one uplink, and all traffic from other 
+hosts using a different uplink.
+</t>
+</section>
+
+<section anchor="sec_response_to_failures" title="Response to failures  ">
+<t> When an uplink fails, all hosts should be able to use the remaining uplinks.
+</t>
+
+
+</section>
+
+<section anchor="sec_classes_of_destinations" title="classes of destinations.">
+<t> Class A, B, and C. 
+
+</t>
+</section>
+
+
+</section>
+
+<section anchor="sec_host_expectations" title="Expectations about hosts in the enterprise network">
+<t> Any host that needs to be able to communicate using the uplinks to a given ISP is expected to be
+configured with an address from the prefix assigned by that ISP.  The host will 
+control which ISP is used for its traffic by selecting one of the addresses configured on 
+the host as the source address for outgoing traffic.  It is the responsibility of the enterprise 
+network to ensure that a packet with the source address from one ISP is not sent on the uplink to 
+a different ISP.
+</t>
+
+<t> If all of the ISP uplinks are working, the choice of source address by the host 
+may be driven by the desire to load share across ISP uplinks, or it may be driven by the desire to 
+take advantage of certain properties of a particular uplink or ISP.  If any of the ISP uplinks 
+is not working, then the choice of source address by the host can determine if packets get dropped.   
+</t>
+
+<t> How to make the host make good decisions about source address selection is not a solved problem.
+We do not attempt to solve this problem in this document.  Instead we discuss the characteristics
+of the mechansisms that have been proposed to help hosts select good source addresses in order to 
+understand what requirements they may place on enterprise routing to support multihoming.
+</t>
+
+<section anchor="sec_sessions_from_external_hosts" title="Sessions initiated from external hosts">
+<t> An external host initiating communication with a host internal to a multihomed site using PA 
+addressing will need to have multiple addresses for that host. Using the 
+
+</t>
+
+<t> 
+For a sessions originated from an external host to an internal host, the choice of source address
+used by the internal host is simple.  The internal host has no choice but to use the destination 
+address in the received packet as the source address of the transmitted packet.   
+</t>
+</section>
+
+<section anchor="sec_sessions_from_internal_hosts" title="Sessions initiated from internal hosts">
+<t> For a session originated by a host internal to the multi-homed site, the decision of what source 
+address to select is more complicated.  There are three main ways for hosts to get information about the 
+network:  Neighbor Discovery Router Advertisements (RAs), DHCPv6, and ICMPv6.  
+</t>
+
+<t> 
+<xref target="RFC6724"/> defines the current default address selection policy for IPv6. It uses properties of
+the addresses themselves such as scope (link-local, global, etc.) and whether or not the .  As section points out that
+this default policy fa
+
+
+<xref target="RFC6724"/> relies on address 
+
+</t>
+
+
+</section>
+
+<section anchor="sec_ND_RA" title="Hosts learn information about the network via Neighbor Discovery Router Advertisements">
+<t> 
+
+</t>
+</section>
+
+<section anchor="sec_DHCPv6" title="Hosts may learn information about the network via DHCPv6">
+<t> 
+
+</t>
+</section>
+
+
+</section>
+
+
+<section anchor="sec_routing_protocol_expectations" title="What we expect the routing protocol to provide">
+<t> 
+
+</t>
+
+<section anchor="sec_primary_goal" title="Primary goal: Make sure that packets are always 
+delivered to the correct site exit router">
+<t> 
+Packet should be routed with the following criteria:
+
+1) Forwarding is loop-free
+2) Packets are delivered to site exit router whose uplink will accept packets with that source address.
+
+
+</t>
+</section>
+
+<section anchor="sec_secondary_goal" title="Secondary goal: Provide information to routers adjacent to hosts that
+can be converted to ND Router Advertisements  which in turn assist the host with source address selection ">
+<t> 
+
+</t>
+</section>
+
+</section>
+
+
+<section anchor="sec_asfdadf" title="Two pass route lookup model ">
+<t> 
+Each router maintains a destination-based route table for 
+</t>
+</section>
 
     <section anchor="L3" title="Internet layer (IPv6)">
       <t/>
@@ -331,7 +551,8 @@
     </section>
 
     <section anchor="Acknowledgements" title="Acknowledgements">
-      <t>The original outline was suggested by Ole Troan.</t>
+      <t>The original outline was suggested by Ole Troan.  Many of the ideas 
+	  in this draft were described in <xref target="I-D.huitema-shim6-ingress-filtering"/> . </t>
     </section>
   </middle>
 
@@ -359,6 +580,9 @@
     </references>
 
     <references title="Informative References">
+	
+      <?rfc include="reference.I-D.huitema-shim6-ingress-filtering" ?>
+	  
       <?rfc include="reference.I-D.baker-ipv6-isis-dst-src-routing" ?>
 
       <?rfc include="reference.I-D.baker-rtgwg-src-dst-routing-use-cases" ?>

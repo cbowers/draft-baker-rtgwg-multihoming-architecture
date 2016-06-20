@@ -104,9 +104,52 @@
 
 
 <section title="Introduction">
-<t> 
+
+<t>  Connecting an enterprise site to multiple ISPs is commonly
+used to provide redundant uplinks to different ISPs.  
+If the site uses provider-independent(PI) addresses, all traffic
+originating from the enterprise can use source addresses from the PI 
+address space.  Site multihoming with PI addresses is commonly used 
+with both IPv4 and IPv6, and does not present any new technical challenges.
+</t> 
+
+<t>  It may be desireable for an enterprise site to connect to multiple ISPs
+using provider-assigned(PA) addresses, instead of PI addresses.  Multihoming with 
+provider-assigned addresses is typically less expensive for the enterprise 
+relative to using provider-independent addresses.  PA multihoming is also 
+a practice that should be facilitated and encouraged because it does not 
+add to the size of the Internet routing table, whereas PI multihoming.  
+</t>
+
+<t> With PA multihoming,
+for each ISP connection, the site is assigned a prefix from within an address 
+block allocated to that ISP by its National or Regional Internet Registry.  
+In the simple case of two ISPs (ISP-A and ISP-B), the site will have two
+different prefixes assigned to it (prefix-A and prefix-B). This arrangement is 
+problematic when the ISPs implement ingress source address filtering, as
+recommended by <xref target="RFC2827">BCP38 (RFC2827)</xref>.
+</t>
+
+<t> In order to limit denial of service attacks using spoofed source addresses
+<xref target="RFC2827">BCP38</xref> recommends that ISPs
+filter traffic from customer sites to only allow traffic with a source 
+address that has been assigned by that ISP.  So traffic 
+sent from a multihomed site with a source address in prefix-A
+on the uplink to ISP-B may get dropped based on BCP38 filtering.
+</t>
+
+<t> It should be noted however that that it is not enough to simply have ISP-B add
+prefix-A to its list of allowed source addresses on the uplink from the multihomed 
+site.  Suppose that the uplink to ISP-A fails and a packet is sent from the 
+multihomed site on the uplink to ISP-B with a source address A1 from prefix-A.
+If ISP-B does not drop the packet based on BCP38, it may ultimately get routed to 
+its final destination, an external host somewhere on the Internet.  That external host 
+will respond with a packet whose destination address is A1.  
+
+</t>
 
 
+<t>
 This note attempts to encompass a complete architecture for routing
       in <xref target="RFC2460">IPv6</xref> Multihoming. It is not a new
       topic; the IETF has thought about it in the past, and documented that
@@ -292,9 +335,24 @@ of the mechansisms that have been proposed to help hosts select good source addr
 understand what requirements they may place on enterprise routing to support multihoming.
 </t>
 
+<t> The shim6 protocol provides a mechasism that allows a pair of
+hosts to associate multiple IP addresses with each host.  Due to the lack of 
+adoption of shim6, this document assumes that hosts are not able to take advantage of the 
+capabilities provided by shim6.
+</t>
+
 <section anchor="sec_sessions_from_external_hosts" title="Sessions initiated from external hosts">
-<t> An external host initiating communication with a host internal to a multihomed site using PA 
-addressing will need to have multiple addresses for that host. Using the 
+<t> An external host initiating communication with a host internal to a PA multihomed site
+will need to know multiple addresses for that host in order to communicate with it using
+different ISPs to the multihomed site. These addresses are typically learned through DNS.  
+(For simplicity, we assume that the external host is single-homed.)
+The external host chooses the ISP that will be used at the remote multihomed site by setting
+the destination address on the packets it transmits. 
+</t>
+
+<t> When all of the ISP uplinks from the multihomed site are working, the destination address 
+used by the external host could be used to control load sharing on the uplinks.  
+In the event a failure of one of the ISP uplinks, the destination address used by the 
 
 </t>
 
@@ -560,6 +618,8 @@ Each router maintains a destination-based route table for
     <!-- references split to informative and normative -->
 
     <references title="Normative References">
+      <?rfc include="reference.RFC.2827" ?>
+
       <?rfc include="reference.RFC.1122" ?>
 
       <?rfc include="reference.RFC.1123" ?>

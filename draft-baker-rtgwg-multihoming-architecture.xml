@@ -168,8 +168,8 @@ As traffic leaves the site on an uplink to an ISP, the
 source address gets translated to an address within the prefix assigned 
 by the ISP on that uplink in a predictable and reversible manner.
 <xref target="RFC6296"/> is currently classified as Experimental, 
-and it has been implemented by several vendors.  For more discussion of 
-NPTv6, see <xref target="sec_nptv6"/>.
+and it has been implemented by several vendors. See <xref target="sec_nptv6"/>,
+for more discussion of NPTv6.
 </t>
 
 <t>This document defines routing requirements for enterprise multihoming 
@@ -207,49 +207,196 @@ to support these enterprise network scenarios and the mechanisms by which hosts
 are expected to select source addresses dynamically based on network state.
 </t>
 
-<t>
-This note attempts to encompass a complete architecture for routing
-      in <xref target="RFC2460">IPv6</xref> Multihoming. It is not a new
-      topic; the IETF has thought about it in the past, and documented that
-      thought in at least<list style="symbols">
-          <t><xref target="RFC1122">Requirements for Internet Hosts -
-          Communication Layers</xref>,</t>
-
-          <t><xref target="RFC1123">Requirements for Internet Hosts -
-          Application and Support</xref>,</t>
-
-          <t><xref target="RFC3582">Goals for IPv6 Site-Multihoming
-          Architectures</xref>,</t>
-
-          <t><xref target="RFC4116">IPv4 Multihoming Practices and
-          Limitations</xref>,</t>
-
-          <t><xref target="RFC4218">Threats Relating to IPv6 Multihoming
-          Solutions</xref>,</t>
-
-          <t><xref target="RFC4219">Things Multihoming in IPv6 (MULTI6)
-          Developers Should Think About</xref>, and</t>
-
-          <t><xref target="RFC7157">IPv6 Multihoming without Network Address
-          Translation</xref>.</t>
-        </list></t>
-
-      <t>Some of those documents are quite dated. However, the definitions
-      they give and the questions they ask remain valid.</t>
-
-      <section title="Requirements Language">
-        <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
-        "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
-        document are to be interpreted as described in <xref
-        target="RFC2119"/>.</t>
-      </section>
-    </section>
+</section>
 
 
 <section anchor="sec_enterprise_req" title="Enterprise Multihoming Requirements">
-<t> 
-asdf
+
+
+<section anchor="sec_simple_scenario" title="Simple Multihoming Scenario">
+<t>We start by looking at a simple scenario where a site has connections to two ISPs,
+as shown in <xref target="fig_simple_scenario"/>.
+The site is assigned the prefix 2001:0db8:0:a000::/52 by ISP-A 
+and prefix 2001:0db8:0:b000::/52 by ISP-B. 
+We consider three hosts in the site.  H31 and H32 are on a LAN  
+that has been assigned subnets 2001:db8:0:a010::/64 and 
+2001:db8:0:b010::/64.  H31 has been assigned the addresses 
+2001:db8:0:a010::31 and 2001:db8:0:b010::31.  H32 has been assigned 
+2001:db8:0:a010::32 and 2001:db8:0:b010::32.
+H41 is on a different subnet that has been 
+assigned 2001:db8:0:a020::/64 and 2001:db8:0:b020::/64.  
 </t>
+
+
+
+<figure anchor="fig_simple_scenario" title="Simple multihoming scenario " align="center">
+<artwork align="center"><![CDATA[
+                                        2001:db8:0:a010::101   H101
+                                                                 |
+                                                                 |
+2001:db8:0:a010::31                                          --------
+2001:db8:0:b010::31                            ,-----.      /        \
+                   +--+   +--+       +----+  ,'       `.   :          :
+               +---|R1|---|R4|---+---|SERa|-+   ISP-A   +--+--        :
+          H31--+   +--+   +--+   |   +----+  `.       ,'   :          :
+               |                 |             `-----'     : Internet :
+               |                 |                         :          :
+               |                 |                         :          :
+               |                 |                         :          :
+               |                 |             ,-----.     :          :
+          H32--+   +--+          |   +----+  ,'       `.   :          :
+               +---|R2|----------+---|SERb|-+   ISP-B   +--+--        :
+                   +--+          |   +----+  `.       ,'   :          :
+                                 |             `-----'     :          :
+                                 |                         :          :
+                   +--+  +--+  +--+                         \        /
+          H41------|R3|--|R5|--|R6|                          --------  
+                   +--+  +--+  +--+ 
+
+2001:db8:0:a020::41 
+2001:db8:0:b020::41
+
+]]></artwork>
+</figure>
+
+<t>We refer to a router that connects the site to an ISP as a site edge router(SER).
+Several other routers provide connectivity among the internal hosts 
+(H31, H32, and H41), as well as connecting the internal 
+hosts to the Internet through SERa and SERb.  In this example 
+SERa and SERb share a direct connection to each other.  
+In <xref target="sec_simple_not_dir_conn"/>,
+we consider a scenario where this is not the case.
+</t>
+
+<t> For the moment, we assume that the hosts are able to make good choices about 
+which source addresses through some mechansism that doesn't involve the routers in the site
+network.  Here, we focus on primary task of the routed site network, which is to get packets
+efficiently to their destinations, while sending a packet to the ISP that assigned the prefix
+that matches the source address of the packet.  In 
+<xref target="sec_host_mechanisms"/>, we examine what role the routed network
+may play in helping hosts make good choices about source addresses for packets.
+</t>
+
+<t>  With this solution, routers will need form of Source Address Dependent Routing, 
+which will be new funtionality.  It would be useful if an enterprise site does not 
+need to upgrade all routers to support the new SADR functionality in order to support 
+PA multi-homing.  We consider if this is possible and what are the tradeoffs of not 
+having all routers in the site support SADR functionality.
+</t>
+
+<t>In the topology in <xref target="fig_simple_scenario"/>, it is possible to 
+support PA multihoming with only SERa and SERb being capable of SADR.  The other routers 
+can continue to forward based only on destination address, and exchange routes that 
+only consider destination address.  In this scenario, SERa and SERb communicate source-scoped
+routing information across their shared connection.  When SERa receives a packet 
+with a source address matching prefix 2001:0db8:0:b000::/52 , 
+it forwards the packet to SERb, which forwards it on
+the uplink to ISP-B.  The analogous behavious holds for traffic that SERb recieves with a source
+address matching prefix 2001:0db8:0:a000::/52.   
+</t>
+
+<t>In <xref target="fig_simple_scenario"/>, when only SERa and SERb are capable of 
+source address dependent routing, PA multi-homing will work.  However, the paths over which 
+the packets are sent will generally not be the shortest paths.  The forwarding paths will 
+generally be more efficient as more routers are capable of SADR.  For example, if R4, R2, and R6
+are upgraded to support SADR, then can exchange source-scoped routes with SERa and SERb. 
+They will thne know to send traffic with a 
+source address matching prefix 2001:0db8:0:b000::/52 directly to SERb, without sending
+it to SERa first.
+</t> 
+
+</section>
+
+<section anchor="sec_simple_not_dir_conn" title="Simple multihoming scenario where
+SERs are not directly connected">
+
+<t>In <xref target="fig_simple_not_dir_conn"/>, we modify the topology slightly 
+by inserting R7, so that SERa and SERb are no longer directly connected.  With
+this topology, it is not enough to just enable SADR routing on SERa and SERb to support
+PA multi-homing.  There are two solutions to ways to enable PA multihoming in this 
+topology.
+</t> 
+
+<figure anchor="fig_simple_not_dir_conn" title="Simple multihoming scenario where
+SERs are not directly connected " align="center">
+<artwork align="center"><![CDATA[
+                                        2001:db8:0:1234::101    H101
+                                                                 |
+                                                                 |
+2001:db8:0:a010::31                                          --------
+2001:db8:0:b010::31                            ,-----.      /        \
+                   +--+   +--+       +----+  ,'       `.   :          :
+               +---|R1|---|R4|---+---|SERa|-+   ISP-A   +--+--        :
+          H31--+   +--+   +--+   |   +----+  `.       ,'   :          :
+               |                 |             `-----'     : Internet :
+               |               +--+                        :          :
+               |               |R7|                        :          :
+               |               +--+                        :          :
+               |                 |             ,-----.     :          :
+          H32--+   +--+          |   +----+  ,'       `.   :          :
+               +---|R2|----------+---|SERb|-+   ISP-B   +--+--        :
+                   +--+          |   +----+  `.       ,'   :          :
+                                 |             `-----'     :          :
+                                 |                         :          :
+                   +--+  +--+  +--+                         \        /
+          H41------|R3|--|R5|--|R6|                          --------  
+                   +--+  +--+  +--+                              |
+                                                                 | 
+2001:db8:0:a020::41                     2001:db8:0:5678::501    H501
+2001:db8:0:b020::41
+
+]]></artwork>
+</figure>
+
+<t> One option is to effectively modify the topology by creating a logical tunnel between 
+SERa and SERb, using GRE for example.  Although SERa and SERb are not directly connected physically
+in this topology, they can be directly connected logically by a tunnel.
+</t> 
+
+<t> The other option is to enable SADR functionality on R7.  In this way, R7 will
+exchange source-scoped routes with SERa and SERb, making the three routers act as a
+single SADR domain.  This illustrates the basic principle that the minimum requirement 
+for the routed site network to 
+support PA multi-homing is having all of the site exit routers be part of a 
+connected SADR domain.  Extending the connected SADR domain beyond that point 
+can produce more efficient forwarding paths.
+</t> 
+
+<t> Before considering a more complex scenario, let's look in more detail at the
+reasonably simple multihoming scenario in <xref target="fig_simple_not_dir_conn"/> to understand 
+what can reasonably be expected from this solution.  As a general guiding principle,
+an enterprise network operator will expect a multihomed network to behave as 
+close as to a single-homed network as possible.  
+</t> 
+
+<t> To simplifiy the discussion below, we assume that all of the routers in 
+the site support SADR.
+</t> 
+
+<t> For traffic between internal hosts and traffic from outside the site to 
+internal hosts, an enterprise network operator would expect there to be 
+no visible change in the path taken by this traffic, 
+since this traffic does not need to be routed in a way that depends on source address.  
+This can be accomplised by having all of the routers in the network 
+continue to originate normal unscoped destination routes
+for their connected networks.  If we can arrange so that these unscoped 
+destination routes get used for forwarding this traffic, then we will have accomplished
+the goal of keeping forwarding of traffic destined for internal hosts unaffected by 
+the multihoming solution.  
+</t>
+
+<t>
+
+For traffic destined for external hosts, the network operator 
+should expect different 
+SERa will originate a source-scoped route of the form 
+(S=2001:0db8:0:a000::/52, D=::/0), while SERb will originate a 
+source-scoped route of the form (S=2001:0db8:0:b000::/52, D=::/0).  
+</t> 
+
+
+
+</section>
 
 <section anchor="sec_provider_assigned" title="Provider-assigned addresses">
 <t> We want to allow multi-homing to more than two service providers. So mechanism should 
@@ -372,7 +519,7 @@ hosts using a different uplink.
 
 </section>
 
-<section anchor="sec_host_expectations" title="Expectations about hosts in the enterprise network">
+<section anchor="sec_host_mechanisms" title="Mechanisms for hosts to choose source addresses">
 <t> Any host that needs to be able to communicate using the uplinks to a given ISP is expected to be
 configured with an address from the prefix assigned by that ISP.  The host will 
 control which ISP is used for its traffic by selecting one of the addresses configured on 

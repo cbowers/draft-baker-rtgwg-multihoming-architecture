@@ -41,7 +41,7 @@
      ipr="trust200902">
   <front>
     <title abbrev="">Enterprise Routing Requirements to Support Multihoming using 
-	Provider-Assigned Addresses without NAT </title>
+	Provider-Assigned Addresses without Network Prefix Translation</title>
 
     <author fullname="Fred Baker" initials="F.J." surname="Baker">
       <organization>Cisco Systems</organization>
@@ -118,7 +118,7 @@ using provider-assigned(PA) addresses, instead of PI addresses.  Multihoming wit
 provider-assigned addresses is typically less expensive for the enterprise 
 relative to using provider-independent addresses.  PA multihoming is also 
 a practice that should be facilitated and encouraged because it does not 
-add to the size of the Internet routing table, whereas PI multihoming.  
+add to the size of the Internet routing table, whereas PI multihoming does.  
 </t>
 
 <t> With PA multihoming,
@@ -126,28 +126,86 @@ for each ISP connection, the site is assigned a prefix from within an address
 block allocated to that ISP by its National or Regional Internet Registry.  
 In the simple case of two ISPs (ISP-A and ISP-B), the site will have two
 different prefixes assigned to it (prefix-A and prefix-B). This arrangement is 
-problematic when the ISPs implement ingress source address filtering, as
-recommended by <xref target="RFC2827">BCP38 (RFC2827)</xref>.
-</t>
-
-<t> In order to limit denial of service attacks using spoofed source addresses
+problematic.  First, packets with the "wrong" source address may 
+be dropped by one of the ISPs. 
+In order to limit denial of service attacks using spoofed source addresses, 
 <xref target="RFC2827">BCP38</xref> recommends that ISPs
 filter traffic from customer sites to only allow traffic with a source 
-address that has been assigned by that ISP.  So traffic 
-sent from a multihomed site with a source address in prefix-A
-on the uplink to ISP-B may get dropped based on BCP38 filtering.
+address that has been assigned by that ISP.  So a packet 
+sent from a multihomed site on the uplink to ISP-B with a source address
+in prefix-A may be dropped by ISP-B.  
 </t>
 
-<t> It should be noted however that that it is not enough to simply have ISP-B add
+<t>However, even if ISP-B does not implement BCP38 or ISP-B adds
 prefix-A to its list of allowed source addresses on the uplink from the multihomed 
-site.  Suppose that the uplink to ISP-A fails and a packet is sent from the 
-multihomed site on the uplink to ISP-B with a source address A1 from prefix-A.
-If ISP-B does not drop the packet based on BCP38, it may ultimately get routed to 
-its final destination, an external host somewhere on the Internet.  That external host 
-will respond with a packet whose destination address is A1.  
-
+site, two-way communication may still fail. If the packet with source address in prefix-A was sent to 
+ISP-B because the uplink to ISP-A failed, then 
+if ISP-B does not drop the packet and the packet reaches its destination 
+somewhere on the Internet, the return packet will be sent 
+back with a destination address in prefix-A.  The return packet will be routed over 
+the Internet to ISP-A, but it will not be delivered to the multihomed
+site because its link with ISP-A has failed.  Two-way communication 
+would require some arrangement for ISP-B to advertise prefix-A when 
+the uplink to ISP-A fails.
 </t>
 
+<t>With IPv4, this problem is commonly solved by using <xref target="RFC1918"/> 
+private address space within the multi-homed site and 
+Network Address Translation (NAT) or Network Address/Port Translation (NAPT) 
+on the uplinks to the ISPs.  However, one of the goals of IPv6 is to eliminate
+the need for and the use of NAT or NAPT.  Therefore, requiring the use of NAT or NAPT 
+for an enterprise site to multihome with provider-assigned adresses is not an
+attractive solution.  
+</t>
+
+<t> <xref target="RFC6296"/> describes a translation solution
+specifically tailored to meet the requirements of multi-homing
+with provider-assigned IPv6 addresses. With the
+IPv6-to-IPv6 Network Prefix Translation (NPTv6) solution, within the site
+an enterprise can use Unique Local Addresses <xref target="RFC4193"/>
+or the prefix assigned by one of the ISPs.
+As traffic leaves the site on an uplink to an ISP, the 
+source address gets translated to an address within the prefix assigned 
+by the ISP on that uplink in a predictable and reversible manner.
+<xref target="RFC6296"/> is currently classified as Experimental, 
+and it has been implemented by several vendors.  For more discussion of 
+NPTv6, see <xref target="sec_nptv6"/>.
+</t>
+
+<t>This document defines routing requirements for enterprise multihoming 
+using provider-assigned IPv6 addresses. We have made no attempt to 
+write these requirements in a 
+manner that is agnostic to potential solutions. Instead, this 
+document focuses on the following general class of solutions. 
+</t>
+
+<t>Each host at the enterprise has multiple addresses, at least one from 
+each ISP prefix. Each host is responsible for choosing which source 
+address to apply to each packet it sends. A host should be able respond 
+dynamically to the failure of an uplink to a given ISP by no longer 
+sending packets with the source address corresponding to that ISP. The 
+potential mechanisms to communicate information about changes in the 
+network to the host are Neighbor Discovery Router Advertisements, 
+DHCPv6, and ICMP. </t> 
+
+<t>The routers in the enterprise network are responsible for ensuring 
+that packets are delivered to the "correct" ISP uplink based on source address.
+This requires that at least some routers in the site network are able to take
+into account the source address of a packet when deciding how to route it. That is, 
+some routers must be capable of some form of Source Address Dependent Routing (SADR).
+At a minimum, the routers connected to the ISP uplinks (the site exit routers or SERs)
+must be capable of Source Address Dependent Routing.  Expanding the connected domain
+of routers capable of SADR from the site exit routers deeper into the site network 
+will generally result in more efficient routing of traffic with external destinations.
+</t>
+
+<t>The document first looks in more detail at the enterprise networking
+environments in which this solution is expected to operate. It then discusses
+existing and proposed mechansisms for hosts to select the source address applied 
+to packets. Finally, it looks at the requirements for routing that are needed 
+to support these enterprise network scenarios and the mechanisms by which hosts
+are expected to select source addresses dynamically based on network state.
+</t>
 
 <t>
 This note attempts to encompass a complete architecture for routing
@@ -595,6 +653,34 @@ Each router maintains a destination-based route table for
         <t/>
       </section>
     </section>
+	
+<section anchor="sec_nptv6" title="IPv6-to-IPv6 Network Prefix Translation">
+
+<t>IPv6-to-IPv6 Network Prefix Translation is not the focus of this 
+document. This document describes a solution where a host in a 
+multihomed site determines which ISP a packet will be sent to based on 
+the source address it applies to the packet. This solution has many 
+moving parts. It requires 
+some routers in the enterprise site to support an as-yet-unspecified 
+form of Source Address Dependent Routing (SADR). It requires a host to 
+be able to learn when the uplink to an ISP fails so that it can stop 
+using the source address corresponding to that ISP. Ongoing work to 
+create mechansisms to accomplish this are discussed in this document, 
+but they are still a work in progress. 
+</t>
+
+<t> The requirements in this document aim at creating a PA multihoming 
+solution that is as easy as possible for an enterprise to deploy. However, 
+the success of this solution will depend greatly on whether or not the 
+as-yet-unspecified mechanisms for hosts to select source addresses based 
+on the state of ISP uplinks gets implemented across a wide range of 
+operating systems as the default mode of operation.
+Until that occurs, NPTv6 should still be 
+considered a viable option to enable PA multihoming for enterprises. 
+</t>
+
+</section>
+	
 
     <section anchor="IANA" title="IANA Considerations">
       <t>This memo asks the IANA for no new parameters.</t>
@@ -606,6 +692,7 @@ Each router maintains a destination-based route table for
       <section anchor="Privacy" title="Privacy Considerations">
         <t/>
       </section>
+	  
     </section>
 
     <section anchor="Acknowledgements" title="Acknowledgements">
@@ -617,20 +704,26 @@ Each router maintains a destination-based route table for
   <back>
     <!-- references split to informative and normative -->
 
-    <references title="Normative References">
-      <?rfc include="reference.RFC.2827" ?>
+<references title="Normative References">
+<?rfc include="reference.RFC.2827" ?>
 
-      <?rfc include="reference.RFC.1122" ?>
+<?rfc include="reference.RFC.4193" ?>
 
-      <?rfc include="reference.RFC.1123" ?>
+<?rfc include="reference.RFC.6296" ?>
 
-      <?rfc include="reference.RFC.2119"?>
+<?rfc include="reference.RFC.1918" ?>
 
-      <?rfc include="reference.RFC.2460"?>
+<?rfc include="reference.RFC.1122" ?>
 
-      <?rfc include="reference.RFC.3582" ?>
+<?rfc include="reference.RFC.1123" ?>
 
-      <?rfc include="reference.RFC.4116" ?>
+<?rfc include="reference.RFC.2119"?>
+
+<?rfc include="reference.RFC.2460"?>
+
+<?rfc include="reference.RFC.3582" ?>
+
+<?rfc include="reference.RFC.4116" ?>
 
       <?rfc include="reference.RFC.4218" ?>
 

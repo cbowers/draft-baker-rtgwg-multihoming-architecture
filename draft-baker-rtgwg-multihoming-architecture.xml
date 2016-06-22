@@ -180,7 +180,7 @@ document focuses on the following general class of solutions.
 </t>
 
 <t>Each host at the enterprise has multiple addresses, at least one from 
-each ISP prefix. Each host is responsible for choosing which source 
+each ISP-assigned prefix. Each host is responsible for choosing which source 
 address to apply to each packet it sends. A host should be able respond 
 dynamically to the failure of an uplink to a given ISP by no longer 
 sending packets with the source address corresponding to that ISP. The 
@@ -477,8 +477,83 @@ by SERa, so traffic from all hosts will use ISP-A to reach H101 based on the
 longest destination prefix match in the route lookup. 
 </t>
 
-<t> Implementing the same routing policy is more difficult with a PA multihoming 
-solution without NAT.  
+<t> Implementing the same routing policy is more difficult with the PA multihoming 
+solution described in this document since it doesn't use NAT.  By design, the only way to control
+where a packet exits this network is by setting the source address of the packet.  Since the 
+network cannot modify the source address without NAT, the host must set it.
+To implement this routing policy, each host needs to use the source address from the prefix assigned
+by ISP-A to send traffic destined for H101.  Mechansisms have been proposed to 
+allow hosts to choose the source address for packets in a fine grained manner.  We will discuss 
+these proposals in <xref target="sec_host_mechanisms"/>.  However, 
+interacting with host operating systems in some manner to ensure a particular source address is chosen
+for a particular destination prefix is not what an enterprise network administrator would expect
+to have to do to implement this routing policy.
+</t>
+</section>
+
+<section anchor="sec_more_complex_isp_connectivity" title="More complex ISP connectivity">
+
+<t>The previous sections considered two variations of a simple multihoming scenario where
+the site is connected to two ISPs offering only internet connectivity.  It is likely that 
+many actual enterprise multihoming scenarios will be similar to this simple example.
+However, there are more complex multihoming scenarios that we would like this solution 
+to address as well.   
+</t>
+
+<t>It is fairly common for an ISP to offer a service in addition
+to internet access over the same uplink.  This scenario is reflected in 
+<xref target="fig_isp_service"/>.  In addition to internet access, 
+ISP-B also offers a service which requires the site
+to access host H61 at 2001:db8:0:5678::61.  ISP-B blocks access to 
+H61 from the internet.  So the site needs to send traffic destined
+for 2001:db8:0:5678/64 over the link from SERb to ISP-B.  
+</t>
+
+<figure anchor="fig_isp_service" title="Services offered from ISP-A and ISP-B " align="center">
+<artwork align="center"><![CDATA[
+                                        2001:db8:0:1234::101    H101
+                                                                 |
+                                                                 |
+2001:db8:0:a010::31                                          --------
+2001:db8:0:b010::31                            ,-----.      /        \
+                   +--+   +--+       +----+  ,'       `.   :          :
+               +---|R1|---|R4|---+---|SERa|-+   ISP-A   +--+--        :
+          H31--+   +--+   +--+   |   +----+  `.       ,'   :          :
+               |                 |             `-----'     : Internet :
+               |                 |                |        :          :
+               |                 |               H51       :          :
+               |                 |     2001:db8:0:5555::51 :          :
+               |               +--+                        :          :
+               |               |R7|                        :          :
+               |               +--+                        :          :
+               |                 |                         :          :
+               |                 |             ,-----.     :          :
+          H32--+   +--+          |  +-----+  ,'       `.   :          :
+               +---|R2|-----+----+--|SERb1|-+   ISP-B   +--+--        :
+                   +--+     |       +-----+  `.       ,'   :          :
+                          +--+                 `--|--'     :          :
+                          |R8|                    |         \        /
+                          +--+                 ,--|--.       --------   
+                            |       +-----+  ,'       `.               
+                            +-------|SERb2|-+   ISP-B   |              
+                            |       +-----+  `.       ,'               
+                            |                  `-----'                 
+                            |                     |
+                    +--+  +--+                   H61         
+           H41------|R3|--|R5|           2001:db8:0:6666::61            
+                    +--+  +--+                                     
+                                         
+2001:db8:0:a020::41                                                 
+2001:db8:0:b020::41
+]]></artwork>
+</figure>
+
+<t>
+
+There are two possible approaches to 
+
+
+
 </t>
 
 

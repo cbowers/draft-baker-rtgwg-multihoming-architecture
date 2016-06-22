@@ -216,8 +216,8 @@ are expected to select source addresses dynamically based on network state.
 <section anchor="sec_simple_scenario" title="Simple Multihoming Scenario">
 <t>We start by looking at a simple scenario where a site has connections to two ISPs,
 as shown in <xref target="fig_simple_scenario"/>.
-The site is assigned the prefix 2001:0db8:0:a000::/52 by ISP-A 
-and prefix 2001:0db8:0:b000::/52 by ISP-B. 
+The site is assigned the prefix 2001:db8:0:a000::/52 by ISP-A 
+and prefix 2001:db8:0:b000::/52 by ISP-B. 
 We consider three hosts in the site.  H31 and H32 are on a LAN  
 that has been assigned subnets 2001:db8:0:a010::/64 and 
 2001:db8:0:b010::/64.  H31 has been assigned the addresses 
@@ -289,10 +289,10 @@ support PA multihoming with only SERa and SERb being capable of SADR.  The other
 can continue to forward based only on destination address, and exchange routes that 
 only consider destination address.  In this scenario, SERa and SERb communicate source-scoped
 routing information across their shared connection.  When SERa receives a packet 
-with a source address matching prefix 2001:0db8:0:b000::/52 , 
+with a source address matching prefix 2001:db8:0:b000::/52 , 
 it forwards the packet to SERb, which forwards it on
 the uplink to ISP-B.  The analogous behavious holds for traffic that SERb recieves with a source
-address matching prefix 2001:0db8:0:a000::/52.   
+address matching prefix 2001:db8:0:a000::/52.   
 </t>
 
 <t>In <xref target="fig_simple_scenario"/>, when only SERa and SERb are capable of 
@@ -301,7 +301,7 @@ the packets are sent will generally not be the shortest paths.  The forwarding p
 generally be more efficient as more routers are capable of SADR.  For example, if R4, R2, and R6
 are upgraded to support SADR, then can exchange source-scoped routes with SERa and SERb. 
 They will thne know to send traffic with a 
-source address matching prefix 2001:0db8:0:b000::/52 directly to SERb, without sending
+source address matching prefix 2001:db8:0:b000::/52 directly to SERb, without sending
 it to SERa first.
 </t> 
 
@@ -362,37 +362,124 @@ connected SADR domain.  Extending the connected SADR domain beyond that point
 can produce more efficient forwarding paths.
 </t> 
 
+</section>
+
+<section anchor="sec_network_operator_expectations" title="Enterprise Network Operator Expectations">
+
 <t> Before considering a more complex scenario, let's look in more detail at the
 reasonably simple multihoming scenario in <xref target="fig_simple_not_dir_conn"/> to understand 
 what can reasonably be expected from this solution.  As a general guiding principle,
-an enterprise network operator will expect a multihomed network to behave as 
-close as to a single-homed network as possible.  
-</t> 
-
-<t> To simplifiy the discussion below, we assume that all of the routers in 
-the site support SADR.
+we assume an enterprise network operator will expect a multihomed network to behave as 
+close as to a single-homed network as possible.  So a solution that meets those expectations 
+where possible is a good thing.
 </t> 
 
 <t> For traffic between internal hosts and traffic from outside the site to 
 internal hosts, an enterprise network operator would expect there to be 
 no visible change in the path taken by this traffic, 
-since this traffic does not need to be routed in a way that depends on source address.  
-This can be accomplised by having all of the routers in the network 
+since this traffic does not need to be routed in a way that depends on source address.
+It is also reasonable to expect that internal hosts should be able to communicate
+with each other using either of their source addresses without restriction.
+For example, H31 should be able to communicate with H41 using a packet 
+with S=2001:db8:0:a010::31, D=2001:db8:0:b010::41, regardless of the state of 
+uplink to ISP-B.  
+</t> 
+
+<t>These goals can be accomplished by having all of the routers in the network 
 continue to originate normal unscoped destination routes
 for their connected networks.  If we can arrange so that these unscoped 
 destination routes get used for forwarding this traffic, then we will have accomplished
-the goal of keeping forwarding of traffic destined for internal hosts unaffected by 
+the goal of keeping forwarding of traffic destined for internal hosts, unaffected by 
 the multihoming solution.  
 </t>
 
-<t>
-
-For traffic destined for external hosts, the network operator 
-should expect different 
-SERa will originate a source-scoped route of the form 
-(S=2001:0db8:0:a000::/52, D=::/0), while SERb will originate a 
-source-scoped route of the form (S=2001:0db8:0:b000::/52, D=::/0).  
+<t> For traffic destined for external hosts, it is reasonable to expect
+that traffic with an source adddress from the prefix assigned by ISP-A to
+follow the path to that the traffic would follow if there is no connection 
+to ISP-B.  This can be accomplished by having SERa originate a source-scoped 
+route of the form (S=2001:db8:0:a000::/52, D=::/0) .  If all of the routers in the
+site support SADR, then the path of traffic exiting via ISP-A can match that
+expectation.   If some routers don't support SADR, then it is reasonable 
+to expect that the path for traffic exiting via ISP-A may be different within the
+site.  This is a tradeoff that the enterprise network operator may decide to make.
 </t> 
+
+<t> It is important to understand how this multihoming solution behaves 
+when an uplink to one of the ISPs fails. To simplify this discussion, 
+we assume that all routers in the site support SADR.  
+We first start by looking at how the network operates when the uplinks to 
+both ISP-A and ISP-B are functioning properly.  SERa originates a source-scoped 
+route of the form (S=2001:db8:0:a000::/52, D=::/0), and 
+SERb is originates a source-scoped 
+route of the form (S=2001:db8:0:b000::/52, D=::/0).  These routes 
+are distributed through the routers in the site, 
+and they establish within the routers two set of forwarding paths for 
+traffic leaving the site.  One set of forwarding paths is for packets
+with source address in 2001:db8:0:a000::/52.  The other set of forwarding paths is 
+for packets with source address in 2001:db8:0:b000::/52.  The 
+normal destination routes which are not scoped to these two source
+prefixes play no role in the forwarding. 
+Whether a packet exits the site via SERa or via SERb is completely 
+determined by the source address applied to the packet by the host. 
+So for example, when host H31 sends a packet to host H101 with
+(S=2001:db8:0:a010::31, D=2001:db8:0:1234::101), the packet will 
+only be sent out the link from SERa to ISP-A.  
+</t> 
+
+<t> Now consider what happens when the uplink from 
+SERa to ISP-A fails.  The only way for the packets from 
+H31 to reach H101 is for H31 to start using the source address
+for ISP-B. H31 needs to send the following packet: 
+(S=2001:db8:0:b010::31, D=2001:db8:0:1234::101).  As far as 
+the forwarding functionality of the site network is concerned,
+there is no reason for SERa to stop originating the route of the 
+form (S=2001:db8:0:a000::/52, D=::/0) when the uplink
+to ISP-A fails, and there is no reason to change the 
+forwarding so that a packet 
+with source address 2001:db8:0:a010::31 is sent to ISP-B.  
+</t> 
+
+<t> This behavior is very different from the behavior that occurs 
+with site multihoming using PI addresses or with PA addresses using NAT.  
+In these other multi-homing solutions, hosts do not need to 
+react to network failures several hops away in order to regain 
+internet access.  Instead, a host can be largely unaware of the failure
+of an uplink to an ISP.  When multihoming with PA addresses and NAT, 
+existing sessions generally need to be re-established after a failure since the 
+external host will receive packets from the internal host with a new source 
+address.  However, new sessions can be established without any 
+action on the part of the hosts. 
+</t> 
+
+<t> Another example where the behavior of this multihoming solution
+differs significantly from that of multihoming with PI address or with PA 
+addresses using NAT is in the ability of the enterprise network operator 
+to route traffic over different ISPs based on destination address.  We 
+still consider the fairly simple network of 
+<xref target="fig_simple_not_dir_conn"/> and assume that uplinks
+to both ISPs are functioning.  Assume that the site is multihomed using
+PA addresses and NAT, and that SERa and SERb each originate a normal destination 
+route for D=::/0, with the route origination dependent on the state of the 
+uplink to the respective ISP.
+</t>
+
+<t> Now suppose it is observed that an important application running 
+between internal hosts and external host H101 experience much better performance 
+when the traffic passes through ISP-A
+(perhaps because ISP-A provides lower latency to H101.)
+When multihoming this site with PI addresses or 
+with PA addresses and NAT, the enterprise network operator
+can configure SERa to originate into the site network a normal destination route for 
+D=2001:db8:0:1234::/64 (the destination prefix to reach H101) that 
+depends on the state of the uplink to ISP-A.  When the link to ISP-A is 
+functioning, the destination route D=2001:db8:0:1234::/64 will be originated 
+by SERa, so traffic from all hosts will use ISP-A to reach H101 based on the 
+longest destination prefix match in the route lookup. 
+</t>
+
+<t> Implementing the same routing policy is more difficult with a PA multihoming 
+solution without NAT.  
+</t>
 
 
 

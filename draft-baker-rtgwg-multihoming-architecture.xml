@@ -501,15 +501,22 @@ to address as well.
 </t>
 
 <t>It is fairly common for an ISP to offer a service in addition
-to internet access over the same uplink.  This scenario is reflected in 
+to internet access over the same uplink.  Two variation of this are reflected in 
 <xref target="fig_isp_service"/>.  In addition to internet access, 
-ISP-B also offers a service which requires the site
-to access host H61 at 2001:db8:0:5678::61.  ISP-B blocks access to 
-H61 from the internet.  So the site needs to send traffic destined
-for 2001:db8:0:5678/64 over the link from SERb to ISP-B.  
+ISP-A offers a service which requires the site
+to access host H51 at 2001:db8:0:5555::51.  The site has 
+a single physical and logical connection with ISP-A, and 
+ISP-A only allows access to H51 over that connection.
+So when H32 needs to access the service at H51
+it needs to send packets with (S=2001:db8:0:a010::32, D=2001:db8:0:5555::51)
+and those packets need to be forward out the link from SERa to ISP-A.  
 </t>
 
-<figure anchor="fig_isp_service" title="Services offered from ISP-A and ISP-B " align="center">
+
+
+
+<figure anchor="fig_isp_service" title="Internet access and services offered
+ by ISP-A and ISP-B " align="center">
 <artwork align="center"><![CDATA[
                                         2001:db8:0:1234::101    H101
                                                                  |
@@ -532,7 +539,7 @@ for 2001:db8:0:5678/64 over the link from SERb to ISP-B.
                +---|R2|-----+----+--|SERb1|-+   ISP-B   +--+--        :
                    +--+     |       +-----+  `.       ,'   :          :
                           +--+                 `--|--'     :          :
-                          |R8|                    |         \        /
+ 2001:db8:0:a010::32      |R8|                    |         \        /
                           +--+                 ,--|--.       --------   
                             |       +-----+  ,'       `.               
                             +-------|SERb2|-+   ISP-B   |              
@@ -548,136 +555,119 @@ for 2001:db8:0:5678/64 over the link from SERb to ISP-B.
 ]]></artwork>
 </figure>
 
+
+<t> ISP-B illustrates a variation on this scenario.  In addition to 
+internet access, ISP-B also offers a service which requires the 
+site to access host H61.  The site has two connections to two different
+parts of ISP-B (shown as SERb1 and SERb2 in <xref target="fig_isp_service"/>).
+ISP-B expects internet traffic to use the uplink from SERb1, while it 
+expects it expects traffic destined for the service at H61 to use the 
+uplink from SERb2.  For either uplink, ISP-B expects the ingress 
+traffic to have a source address matching the prefix it assigned to 
+the site, 2001:db8:0:b000::/52.  
+</t>
+
+<t> As discussed before, we rely completely on the internal host
+to set the source address of the packet properly.  In the case of a 
+packet sent by H31 to access the service in ISP-B at H61, we expect the 
+packet to have the following addresses: (S=2001:db8:0:b010::31, D=2001:db8:0:6666::61).  
+The routed network has two potential ways of distributing routes so that 
+this packet exits the site on the uplink at SERb2.
+</t>
+
+<t> We could just rely on normal destination routes, without using source-prefix scoped routes.
+If we have SERb2 originate a normal unscoped destination route for D=2001:db8:0:6666::/64,
+the packets from H31 to H61 will exit the site at SERb2 as desired.  We should not have to worry 
+about SERa needing to originate the same route, because ISP-B should choose a globally unique 
+prefix for the service at H61.  
+</t>
+
+<t> The alternative is to have SERb2 originate a source-prefix-scoped destination route of the 
+form (S=2001:db8:0:b000::/52, D=2001:db8:0:6666::/64).  From a forwarding point of view, the use 
+of the source-prefix-scoped destination route would result in traffic with source addresses corresponding 
+only to ISP-B being sent to SERb2. Instead, the use 
+of the unscoped destination route would result in traffic with source addresses corresponding 
+to ISP-A and ISP-B being sent to SERb2, as long as the destination address matches the destination prefix.
+It seems like either forwarding behavior would be acceptable.  
+</t>
+
+<t> However, from the point of view of the enterprise network administrator trying to configure,
+maintaim, and trouble-shoot 
+this multihoming solution, it seems much clearer to have SERb2 originate the source-prefix-scoped
+destination route correspond to the service offered by ISP-B.
+In this way, all of the traffic leaving the site is determined by the source-prefix-scoped routes,
+and all of the traffic within the site or arriving from external hosts is determined by 
+the unscoped destination routes.  Therefore, for this multihoming solution we choose to originate 
+source-prefix-scoped routes for all traffic leaving the site.
+</t>
+
+</section>
+
+<section anchor="sec_" title="ISPs and Provider-Assigned Prefixes">
+<t> While we expect that most site multihoming involves connecting to only two ISPs,
+this solution allows for conections to an arbitrary number of ISPs to be supported.
+However, when evaluating scalable implementations of the solution, it would be reasonable to assume
+that the maximum number of ISPs that a site would connect to is five.
+</t>
+
+<t> It is also useful to note that the prefixes assigned to the site by different ISPs
+will not overlap.  This must be the case, since the addresses have to be globablly unique.
+</t>
+
+</section>
+
+</section>
+
+<section anchor="sec_method" title="Generating
+ Source-Prefix-Scoped Route Tables From Unscoped and Source-Prefix-Scoped Routes">
+ <t> So far we have described in general terms how the routers in this solution that are capable 
+ of Source Address Dependent Routing will forward traffic using both normal unscoped
+ destination routes and source-prefix-scoped routes.  Here we give a precise method 
+ for generating a source-prefix-scoped route table on a SADR router.
+</t>
+ 
+<t> 
+<list>
+
 <t>
-
-There are two possible approaches to 
-
-
-
+1) Compute the next-hops for the unscoped destination prefixes using all routers
+in the IGP.  This forwarding table is F(unscoped).
 </t>
 
-
-
-</section>
-
-<section anchor="sec_provider_assigned" title="Provider-assigned addresses">
-<t> We want to allow multi-homing to more than two service providers. So mechanism should 
-be general enough to allow multi-homing to an aribitrary number of service providers. However,
-from a practical point of view, we would expect most cases to be 
-dual-homing to just two providers. 
-</t>
-<t> We also assume that the provider-assigned addresses from a single provider can be
-represented as a small number of prefixes.  The majority will be a single prefix per provider, but 
-we allow for the possibility that a provider assigns mulitple prefixes to a site.  
+<t>
+2) Compute the next-hops for the source-prefix-scoped destination prefixes using 
+only routers in the connected SADR domain. 
 </t>
 
-<t> With these two assumptions, we expect most cases to have two provider-assigned
-prefixes, one for each provider. The worst case might involve ten provider-assigned
-prefixes used to connect to four different service providers.  
+<t> 3) For each unique source prefix, SPi, we create a forwarding table scoped to that source prefix, F(SPi) .
+</t>
+<t>
+4) We initially create F(SPi) by copying all of the destination prefixes and associated next hops from F(unscoped).
+</t>
+<t>
+5) For each destination route scoped to SPi, we copy that destination prefix and next-hop to F(SPi).
+If there is an existing entry for that destination prefix, overwrite it with the source-prefix-scoped entry.  
+</t>
+</list>
+</t>
+ 
+<t>
+The forward tables produced by this process are used in the following to forward packets.
+
+<list>
+
+<t>
+If the source address of the packet matches one of SPi, then look up the destination address
+of the packet in F(SPi) to determine the next-hop for the packet.
 </t>
 
-</section>
-
-<section anchor="sec_no_nat" title="No NAT or NPTv6">
-<t> 
-
-</t>
-</section>
-
-
-<section anchor="sec_no_topology_limitations" title="No limitations site network topology ">
-<t> 
-
-</t>
-</section>
-
-<section anchor="sec_incremental_deployment" title="Benefit from incremental deployment">
-<t> 
-
-</t>
-</section>
-
-<section anchor="sec_not_worse" title="Multihomed network should not function worse than non-multihomed network, even in the presence of failures ">
-<t> 
-  
-</t>
-</section>
-
-<section anchor="sec_external_session_initiation" title="External and internal session initiation">
-<t> A external host should be able to initiate a session with a host internal to the site.  
-
-</t>
-</section>
-
-<section anchor="sec_uplinks_to_isps" title="Uplinks to ISPs">
-<t> The most common scenario will be where the interfaces between site exit routers and ISPs 
-will correspond to different physical interfaces.
-</t>  
-
-<t> There are however scenarios where 
-a single physical interface from an ISP is logically partitioned using, for example, VLAN tagging.
-In this case, the different logical sub-interfaces may have different source address ingress filtering rules 
-applied, so the different sub-interfaces would need to be treated as if they are multi-homed to different ISPs.  
-The solution should accomodate the common scenario, as well more complex scenarios involving physical 
-interfaces divided into sub-interfaces.
-</t>   
-
-<t> There are also scenarios where different site exit interfaces connect to the same ISP, which 
-will apply the same source address ingress filtering rules to the traffic on those interfaces.
-The solution should accomodate this scenario as well. 
-</t> 
-
-</section>
-
-<section anchor="sec_extent_of_site" title="Extent of enterprise site">
-<t> The most common scenario will be a single physical site connecting to two upstream providers.
-However, an enterprise site may interconnect physical sites using leased lines or tunnels.  From 
-a routing point of view, several physical sites may be combined into a single enterprise network site.
-The solution should accomodate the more common scenario, as well as more complex scenarios, as long 
-as they are consistent with other restrictions.
-</t>
-</section>
-
-<section anchor="sec_complexity_of_routing" title="Complexity of routing to upstream ISPs">
-<t>  The most common multihoming scenario will be for the enterprise network site to point
-a default route towards each of its upstream ISPs.  
-
-An enterprise network site which has connections to multiple ISPs may run eBGP with each of those ISPs.
-If the ISPs distribute all or some of the Internet routing table over the eBGP sessions, then the enterprise
-site can 
-
-
-</t>
-</section>
-
-<section anchor="sec_existing_IGP" title="Enterprise network uses existing IGP within the site ">
-<t>  
-OSPFv3, ISIS, or RIPng with some potential enhancements on routers that do source address dependent routing.
-</t>
-</section>
-
-<section anchor="sec_load_sharing" title="Load sharing  ">
-<t> When uplinks to multiple ISPs are working, it should be possible for traffic
-from the site use multiple uplinks.  This could take the form of different 
-flows from the same host using different uplinks. Or it could take the form 
-of all traffic from some hosts using one uplink, and all traffic from other 
-hosts using a different uplink.
-</t>
-</section>
-
-<section anchor="sec_response_to_failures" title="Response to failures  ">
-<t> When an uplink fails, all hosts should be able to use the remaining uplinks.
+<t>
+If the source address of the packet does NOT matche one of SPi, then look up the destination address
+of the packet in F(unscoped) to determine the next-hop for the packet.
 </t>
 
-
-</section>
-
-<section anchor="sec_classes_of_destinations" title="classes of destinations.">
-<t> Class A, B, and C. 
-
+</list>
 </t>
-</section>
-
 
 </section>
 

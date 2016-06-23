@@ -513,8 +513,6 @@ and those packets need to be forward out the link from SERa to ISP-A.
 </t>
 
 
-
-
 <figure anchor="fig_isp_service" title="Internet access and services offered
  by ISP-A and ISP-B " align="center">
 <artwork align="center"><![CDATA[
@@ -619,65 +617,337 @@ will not overlap.  This must be the case, since the addresses have to be globabl
 </section>
 
 <section anchor="sec_method" title="Generating
- Source-Prefix-Scoped Route Tables From Unscoped and Source-Prefix-Scoped Routes">
+ Source-Prefix-Scoped Forwarding Tables">
  <t> So far we have described in general terms how the routers in this solution that are capable 
  of Source Address Dependent Routing will forward traffic using both normal unscoped
- destination routes and source-prefix-scoped routes.  Here we give a precise method 
- for generating a source-prefix-scoped route table on a SADR router.
+ destination routes and source-prefix-scoped destination routes.  Here we give a precise method 
+ for generating a source-prefix-scoped forwarding table on a router that supports SADR.
 </t>
  
 <t> 
 <list>
 
 <t>
-1) Compute the next-hops for the unscoped destination prefixes using all routers
-in the IGP.  This forwarding table is F(unscoped).
+1) Compute the next-hops for the source-prefix-scoped destination prefixes using 
+only routers in the connected SADR domain. These are the initial source-prefix-scoped
+forwarding table entries.
 </t>
 
 <t>
-2) Compute the next-hops for the source-prefix-scoped destination prefixes using 
-only routers in the connected SADR domain. 
+2) Compute the next-hops for the unscoped destination prefixes using all routers
+in the IGP.  This is the unscoped forwarding table.
 </t>
 
-<t> 3) For each unique source prefix, SPi, we create a forwarding table scoped to that source prefix, F(SPi) .
-</t>
 <t>
-4) We initially create F(SPi) by copying all of the destination prefixes and associated next hops from F(unscoped).
+3) Augment each source-prefix-scoped forwarding table with unscoped 
+forwarding table entries based on the following rule. If the destination 
+prefix of the unscoped forwarding entry exactly matches the destination 
+prefix of an existing source-prefix-scoped forwarding entry (including 
+destination prefix length), then do not add the unscoped forwarding 
+entry. If the destination prefix does NOT match an existing enty, then 
+add the entry to the source-prefix-scoped forwarding table. 
 </t>
-<t>
-5) For each destination route scoped to SPi, we copy that destination prefix and next-hop to F(SPi).
-If there is an existing entry for that destination prefix, overwrite it with the source-prefix-scoped entry.  
-</t>
+
 </list>
 </t>
  
 <t>
-The forward tables produced by this process are used in the following to forward packets.
+The forward tables produced by this process are used in the following way to forward packets.
 
 <list>
 
 <t>
-If the source address of the packet matches one of SPi, then look up the destination address
-of the packet in F(SPi) to determine the next-hop for the packet.
+1) If the source address of the packet matches one of the source 
+prefixes, then look up the destination address of the packet in the 
+corresponding source-prefix-scoped forwarding table to determine the 
+next-hop for the packet. 
 </t>
 
 <t>
-If the source address of the packet does NOT matche one of SPi, then look up the destination address
-of the packet in F(unscoped) to determine the next-hop for the packet.
+2) If the source address of the packet does NOT match one of the source 
+prefixes, then look up the destination address of the packet in unscoped 
+forwarding table to determine the next-hop for the packet. 
 </t>
 
 </list>
 </t>
 
+<t> The following example illustrates how this process is used to create
+a forwarding table for each provider-assigned source prefix.  We consider the
+multihomed site network in <xref target="fig_isp_service"/>. Initially we assume
+that all of the routers in the site network support SADR. 
+<xref target="fig_routes_originated"/> shows the routes that are originated by the routers 
+in the site network.
+</t>
+
+<figure anchor="fig_routes_originated" title="Routes Originated by Routers in the Site Network"
+ align="center">
+<artwork align="left"><![CDATA[
+Routes originated by SERa:
+(S=2001:db8:0:a000::/52, D=2001:db8:0:5555/64)
+(S=2001:db8:0:a000::/52, D=::/0)
+(D=2001:db8:0:5555::/64)
+(D=::/0)
+
+Routes originated by SERb1:
+(S=2001:db8:0:b000::/52, D=::/0)
+(D=::/0)
+
+Routes originated by SERb2:
+(S=2001:db8:0:b000::/52, D=2001:db8:0:6666::/64)
+(D=2001:db8:0:6666::/64)
+
+Routes originated by R1:
+(D=2001:db8:0:a010::/64)
+(D=2001:db8:0:b010::/64)
+
+Routes originated by R2:
+(D=2001:db8:0:a010::/64)
+(D=2001:db8:0:b010::/64)
+
+Routes originated by R3:
+(D=2001:db8:0:a020::/64)
+(D=2001:db8:0:b020::/64)
+]]></artwork>
+</figure>
+
+<t> Each SER originates destination routes which are scoped to the source prefix assigned
+by the ISP that the SER connects to.  Note that the SERs also originate the corresponding 
+unscoped destination route.  This is not needed when all of the routers in the site support
+SADR.  However, it is required when some routers do not support SADR.  This will be discussed 
+in more detail later.
+</t>
+
+<t> We focus on how R8 constructs its source-prefix-scoped forwarding tables
+from these route advertisements. R8 computes the next hops for destination routes which are scoped to the 
+source prefix 2001:db8:0:a000::/52. The results are shown in the first table 
+in <xref target="fig_forwarding_entries"/>.
+(In this example, the next hops are computed assuming that all links have the same metric.)
+Then, R8 computes the next hops 
+for destination routes which are scoped to the 
+source prefix 2001:db8:0:b000::/52. The results are shown in the second table 
+in <xref target="fig_forwarding_entries"/> .
+Finally, R8 computes the next hops for the unscoped destination
+prefixes.  The results are shown in the third table in <xref target="fig_forwarding_entries"/>.
+</t>
+
+<figure anchor="fig_forwarding_entries" title="Forwarding Entries Computed at R8"
+ align="center">
+<artwork align="left"><![CDATA[
+forwarding entries scoped to 
+source prefix = 2001:db8:0:a000::/52
+============================================
+D=2001:db8:0:5555/64      NH=R7
+D=::/0                    NH=R7
+
+forwarding entries scoped to 
+source prefix = 2001:db8:0:b000::/52
+============================================
+D=2001:db8:0:6666/64      NH=SERb2
+D=::/0                    NH=SERb1
+
+unscoped forwarding entries
+============================================
+D=2001:db8:0:a010::/64    NH=R2
+D=2001:db8:0:b010::/64    NH=R2
+D=2001:db8:0:a020::/64    NH=R5
+D=2001:db8:0:b020::/64    NH=R5
+D=2001:db8:0:5555::/64    NH=R7
+D=2001:db8:0:6666::/64    NH=SERb2
+D=::/0                    NH=SERb1
+]]></artwork>
+</figure>
+
+<t> The final step is for R8 to augment the source-prefix-scoped 
+forwarding entries with unscoped forwarding entries.  
+If an unscoped forwarding entry has the exact same destination prefix 
+as an source-prefix-scoped forwarding entry (including destination prefix length), 
+then the source-prefix-scoped forwarding entry wins.
+</t>
+
+<t> As as an example of how the source scoped forwarding entries are augmented
+with unscoped forwarding entries, we consider  how the two entries in the 
+first table in <xref target="fig_forwarding_entries"/> 
+(the table for source prefix = 2001:db8:0:a000::/52)
+are augmented with entries from the third table in <xref target="fig_forwarding_entries"/>
+(the table of unscoped forwarding entries).  The first four unscoped forwarding 
+entries (D=2001:db8:0:a010::/64, D=2001:db8:0:b010::/64, D=2001:db8:0:a020::/64, 
+and D=2001:db8:0:b020::/64) are not an exact match for any of the existing entries in the
+forwarding table for source prefix 2001:db8:0:a000::/52.  Therefore,  
+these four entries are added to the final forwarding table for source prefix 2001:db8:0:a000::/52.  
+The result of adding these entries is reflected in first four entries the first 
+table in <xref target="fig_forwarding_tables"/>.  
+</t>
+
+<t> The next unscoped forwarding table entry is for D=2001:db8:0:5555::/64.  This entry
+is an exact match for the existing entry in the
+forwarding table for source prefix 2001:db8:0:a000::/52.  Therefore, we do not replace 
+the existing entry with the entry from the unscoped forwarding table.  This is reflected 
+in the fifth entry in the first table in <xref target="fig_forwarding_tables"/>.  (Note
+that since both scoped and unscoped entries have R7 as the next hop, the result of 
+applying this rule is not visible.)
+</t>
+
+<t> The next unscoped forwarding table entry is for D=2001:db8:0:6666::/64. This entry is not an exact match 
+for any existing entries in the forwarding table for source prefix 
+2001:db8:0:a000::/52. Therefore, we add this entry. This is reflected 
+in the sixth entry in the first table in <xref 
+target="fig_forwarding_tables"/>. 
+</t>
+
+<t> The next unscoped forwarding table entry is for D=::/0. This entry is 
+an exact match for the existing entry in the forwarding table for source 
+prefix 2001:db8:0:a000::/52. Therefore, we do not overwrite the 
+existing source-prefix-scoped entry, as can be seen in the last 
+entry in the first table in <xref target="fig_forwarding_tables"/>.
+</t> 
+
+<figure anchor="fig_forwarding_tables" title="Complete Forwarding Tables Computed at R8"
+ align="center">
+<artwork align="left"><![CDATA[
+
+if source address matches 2001:db8:0:a000::/52
+then use this forwarding table
+============================================
+D=2001:db8:0:a010::/64    NH=R2
+D=2001:db8:0:b010::/64    NH=R2
+D=2001:db8:0:a020::/64    NH=R5
+D=2001:db8:0:b020::/64    NH=R5
+D=2001:db8:0:5555::/64    NH=R7
+D=2001:db8:0:6666::/64    NH=SERb2
+D=::/0                    NH=R7
+
+else if source address matches 2001:db8:0:b000::/52
+then use this forwarding table
+============================================
+D=2001:db8:0:a010::/64    NH=R2
+D=2001:db8:0:b010::/64    NH=R2
+D=2001:db8:0:a020::/64    NH=R5
+D=2001:db8:0:b020::/64    NH=R5
+D=2001:db8:0:5555::/64    NH=R7
+D=2001:db8:0:6666::/64    NH=SERb2
+D=::/0                    NH=SERb1
+
+else use this forwarding table
+============================================
+D=2001:db8:0:a010::/64    NH=R2
+D=2001:db8:0:b010::/64    NH=R2
+D=2001:db8:0:a020::/64    NH=R5
+D=2001:db8:0:b020::/64    NH=R5
+D=2001:db8:0:5555::/64    NH=R7
+D=2001:db8:0:6666::/64    NH=SERb2
+D=::/0                    NH=SERb1
+]]></artwork>
+</figure>
+
+<t> The forwarding tables produced by this process at R8 have the desired properties.
+A packet with a source address in 2001:db8:0:a000::/52 will be forwarded based on the 
+first table in <xref target="fig_forwarding_tables"/>.
+If the packet is destined for the internet at large or the service at
+D=2001:db8:0:5555/64, it will be sent to R7 in the direction of SERa.
+If the packet is destined for an internal host, then the first four entries will send
+it to R2 or R5 as expected.  Note that if this packet has a destination address corresponding
+to the service offered by ISP-B (D=2001:db8:0:5555::/64), then it will get 
+forwarded to SERb2.  It will be dropped by SERb2 or by ISP-B, since it the packet has a 
+source address that was not assigned by ISP-B.  However, this is expected behavior.  In order
+to use the service offered by ISP-B, the host needs to originate the packet with a source 
+address assigned by ISP-B.  
+</t> 
+
+<t> In this example, a packet with a source address that doesn't match 2001:db8:0:a000::/52 or 
+2001:db8:0:b000::/52 must have originated from an external host.  Such a packet will use the unscoped 
+forwarding table (the last table in <xref target="fig_forwarding_tables"/>).  These packets will 
+flow exactly as they would in absence of multihoming.  
+</t> 
+
+<t> We can also modify this example to illustrate how it supports deployments where 
+not all routers in the site support SADR.  Continuing with the topology shown in 
+<xref target="fig_isp_service"/>, suppose that R3 and R5 do not support SADR.
+Instead they are only capable of understanding unscoped route advertisements.  
+The SADR routers in the network will still originate the routes 
+shown in <xref target="fig_routes_originated"/>.  However, R3 and R5 will only 
+understand the unscoped routes as shown in <xref target="fig_routes_understood_by_non_SADR"/>.
+</t> 
+
+<figure anchor="fig_routes_understood_by_non_SADR" title="Routes Advertisements Understood by Routers
+that do no Support SADR"
+ align="center">
+<artwork align="left"><![CDATA[
+Routes originated by SERa:
+(D=2001:db8:0:5555::/64)
+(D=::/0)
+
+Routes originated by SERb1:
+(D=::/0)
+
+Routes originated by SERb2:
+(D=2001:db8:0:6666::/64)
+
+Routes originated by R1:
+(D=2001:db8:0:a010::/64)
+(D=2001:db8:0:b010::/64)
+
+Routes originated by R2:
+(D=2001:db8:0:a010::/64)
+(D=2001:db8:0:b010::/64)
+
+Routes originated by R3:
+(D=2001:db8:0:a020::/64)
+(D=2001:db8:0:b020::/64)
+]]></artwork>
+</figure>
+
+<t> With these unscoped route advertisements, R5 will produce the forwarding table shown in 
+<xref target="fig_R5_forwarding_table"/>.
+</t> 
+
+<figure anchor="fig_R5_forwarding_table" title="Forwarding Table for R5, which doesn't 
+Understand Source-Prefix-Scoped Routes"
+ align="center">
+<artwork align="left"><![CDATA[
+forwarding table
+============================================
+D=2001:db8:0:a010::/64    NH=R8
+D=2001:db8:0:b010::/64    NH=R8
+D=2001:db8:0:a020::/64    NH=R3
+D=2001:db8:0:b020::/64    NH=R3
+D=2001:db8:0:5555::/64    NH=R8
+D=2001:db8:0:6666::/64    NH=SERb2
+D=::/0                    NH=R8
+]]></artwork>
+</figure>
+
+<t> Any traffic that needs to exit the site will eventually hit a SADR-capable
+router.  Once that traffic enters the SADR-capable domain, then it will not leave that 
+domain until it exits the site.  This property is required in order to guarantee that 
+there will not be routing loops involving SADR-capable and non-SADR-capable routers.
+</t> 
+
 </section>
 
 <section anchor="sec_host_mechanisms" title="Mechanisms for hosts to choose source addresses">
+<t> Until this point, we have made the assumption that hosts are able to choose the correct 
+source address using some unspecified mechanism.  This has allowed us to just focus on 
+what the routers in a multihomed site network need to do in order to forward packets 
+to the correct ISP based on source address.  Now we look at possible mechanisms for hosts 
+to choose the correct source address.  We also look at what role, if any, the routers may play 
+in providing information that helps hosts to choose source addresses.  
+</t>
+
+<t> Until this point, we have made the assumption that hosts are able to choose the correct 
+source address using some unspecified mechanism.  This has allowed us to just focus on 
+what the routers in a multihomed site network need to do in order to forward packets 
+to the correct ISP based on source address.  Now we look at possible mechanisms for hosts 
+to choose the correct source address.  We also look at what role, if any, the routers may play 
+in providing information that helps hosts to choose source addresses.  
+</t>
+
 <t> Any host that needs to be able to communicate using the uplinks to a given ISP is expected to be
 configured with an address from the prefix assigned by that ISP.  The host will 
 control which ISP is used for its traffic by selecting one of the addresses configured on 
-the host as the source address for outgoing traffic.  It is the responsibility of the enterprise 
-network to ensure that a packet with the source address from one ISP is not sent on the uplink to 
-a different ISP.
+the host as the source address for outgoing traffic.  It is the responsibility of the site
+network to ensure that a packet with the source address from an ISP is not sent on an uplink to 
+that ISP.
 </t>
 
 <t> If all of the ISP uplinks are working, the choice of source address by the host 
@@ -686,39 +956,25 @@ take advantage of certain properties of a particular uplink or ISP.  If any of t
 is not working, then the choice of source address by the host can determine if packets get dropped.   
 </t>
 
-<t> How to make the host make good decisions about source address selection is not a solved problem.
+<t> How a host should make good decisions about source address selection is not a solved problem.
 We do not attempt to solve this problem in this document.  Instead we discuss the characteristics
 of the mechansisms that have been proposed to help hosts select good source addresses in order to 
 understand what requirements they may place on enterprise routing to support multihoming.
 </t>
 
-<t> The shim6 protocol provides a mechasism that allows a pair of
-hosts to associate multiple IP addresses with each host.  Due to the lack of 
-adoption of shim6, this document assumes that hosts are not able to take advantage of the 
-capabilities provided by shim6.
-</t>
 
-<section anchor="sec_sessions_from_external_hosts" title="Sessions initiated from external hosts">
+
+
 <t> An external host initiating communication with a host internal to a PA multihomed site
 will need to know multiple addresses for that host in order to communicate with it using
 different ISPs to the multihomed site. These addresses are typically learned through DNS.  
 (For simplicity, we assume that the external host is single-homed.)
 The external host chooses the ISP that will be used at the remote multihomed site by setting
-the destination address on the packets it transmits. 
-</t>
-
-<t> When all of the ISP uplinks from the multihomed site are working, the destination address 
-used by the external host could be used to control load sharing on the uplinks.  
-In the event a failure of one of the ISP uplinks, the destination address used by the 
-
-</t>
-
-<t> 
-For a sessions originated from an external host to an internal host, the choice of source address
+the destination address on the packets it transmits. For a sessions 
+originated from an external host to an internal host, the choice of source address
 used by the internal host is simple.  The internal host has no choice but to use the destination 
 address in the received packet as the source address of the transmitted packet.   
 </t>
-</section>
 
 <section anchor="sec_sessions_from_internal_hosts" title="Sessions initiated from internal hosts">
 <t> For a session originated by a host internal to the multi-homed site, the decision of what source 

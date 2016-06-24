@@ -925,7 +925,7 @@ there will not be routing loops involving SADR-capable and non-SADR-capable rout
 
 </section>
 
-<section anchor="sec_host_mechanisms" title="Mechanisms for hosts to choose source addresses">
+<section anchor="sec_host_mechanisms" title="Mechanisms for hosts to choose good source addresses in a multihomed site">
 <t> Until this point, we have made the assumption that hosts are able to choose the correct 
 source address using some unspecified mechanism.  This has allowed us to just focus on 
 what the routers in a multihomed site network need to do in order to forward packets 
@@ -956,14 +956,11 @@ take advantage of certain properties of a particular uplink or ISP.  If any of t
 is not working, then the choice of source address by the host can determine if packets get dropped.   
 </t>
 
-<t> How a host should make good decisions about source address selection is not a solved problem.
-We do not attempt to solve this problem in this document.  Instead we discuss the characteristics
-of the mechansisms that have been proposed to help hosts select good source addresses in order to 
-understand what requirements they may place on enterprise routing to support multihoming.
+<t> How a host should make good decisions about source address selection in a multihomed
+site is not a solved problem.  We do not attempt to solve this problem in this document. 
+Instead we discuss the current state of affairs with respect to standardized solutions and
+implementation of those solutions.  We also look at proposed solutions for this problem.
 </t>
-
-
-
 
 <t> An external host initiating communication with a host internal to a PA multihomed site
 will need to know multiple addresses for that host in order to communicate with it using
@@ -976,15 +973,27 @@ used by the internal host is simple.  The internal host has no choice but to use
 address in the received packet as the source address of the transmitted packet.   
 </t>
 
+
 <section anchor="sec_sessions_from_internal_hosts" title="Sessions initiated from internal hosts">
 <t> For a session originated by a host internal to the multi-homed site, the decision of what source 
 address to select is more complicated.  There are three main ways for hosts to get information about the 
-network:  Neighbor Discovery Router Advertisements (RAs), DHCPv6, and ICMPv6.  
+network:  Neighbor Discovery Router Advertisements (RAs), DHCPv6, and ICMPv6.  Note that we are explicitly
+excluding the possibility of having hosts participate in 
+or even listen directly to routing protocol advertisements.
 </t>
 
+<section anchor="sec_DHCPv6" title="DHCPv6">
 <t> 
-<xref target="RFC6724"/> defines the current default address selection policy for IPv6. It uses properties of
-the addresses themselves such as scope (link-local, global, etc.) and whether or not the .  As section points out that
+<xref target="RFC6724"/> defines a policy framework to allow a host to select both 
+source addresses and destination addresses.  
+
+Section 2.1 of <xref target="RFC6724"/> defines a default address selection policy that operates within this framework.
+, 
+the current default address selection policy for IPv6. It uses properties of
+the addresses themselves such as scope (link-local, global, etc.) and whether or not the address
+is . 
+
+ As section points out that
 this default policy fa
 
 
@@ -992,6 +1001,7 @@ this default policy fa
 
 </t>
 
+</section>
 
 </section>
 

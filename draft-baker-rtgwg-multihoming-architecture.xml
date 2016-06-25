@@ -601,7 +601,7 @@ source-prefix-scoped routes for all traffic leaving the site.
 
 </section>
 
-<section anchor="sec_" title="ISPs and Provider-Assigned Prefixes">
+<section anchor="sec_isps_and_pa_prefixes" title="ISPs and Provider-Assigned Prefixes">
 <t> While we expect that most site multihoming involves connecting to only two ISPs,
 this solution allows for conections to an arbitrary number of ISPs to be supported.
 However, when evaluating scalable implementations of the solution, it would be reasonable to assume
@@ -609,9 +609,24 @@ that the maximum number of ISPs that a site would connect to is five.
 </t>
 
 <t> It is also useful to note that the prefixes assigned to the site by different ISPs
-will not overlap.  This must be the case, since the addresses have to be globablly unique.
+will not overlap.  This must be the case , since the provider-assigned 
+addresses have to be globablly unique.
 </t>
+</section>
 
+<section anchor="sec_simpler_topologies" title="Simpler topologies">
+<t> The topologies of many enterprise sites using this multihoming solution may 
+in practice be simpler than the examples that we have used. The topology
+in  <xref target="fig_simple_scenario"/> could be further simplified by having 
+all hosts directly connected to the LAN connecting the two site exit routers, 
+SERa and SERb.  The topology could also be simplified by having the
+uplinks to ISP-A and ISP-B both connected to the same site exit router.
+However, it is the aim of this draft to provide a solution that applies to 
+a broad a range of enterprise site network topologies, so 
+this draft focuses on providing a solution to the more general case.
+The simplified cases will also be supported by this solution, but they 
+are not the primary target of this solution.
+</t>
 </section>
 
 </section>
@@ -978,9 +993,50 @@ address in the received packet as the source address of the transmitted packet.
 <t> For a session originated by a host internal to the multi-homed site, the decision of what source 
 address to select is more complicated.  There are three main ways for hosts to get information about the 
 network:  Neighbor Discovery Router Advertisements (RAs), DHCPv6, and ICMPv6.  Note that we are explicitly
-excluding the possibility of having hosts participate in 
-or even listen directly to routing protocol advertisements.
+excluding the possibility of having hosts participate in or even listen directly
+to routing protocol advertisements.
 </t>
+
+<t> First we look at how a host is currently expected to select the source and destination address 
+with which it sends a packet.  
+</t>
+
+<section anchor="sec_host_address_selection_algo" title="Address Selection Algorithms on Hosts">
+<t> 
+<xref target="RFC6724"/> defines the algorithms that hosts are expected to use to select source and destination 
+addresses for packets.  It defines an algorithm for selecting a source address and a separate algorithm for selecting
+a destination address.  Both of these algorithms depend on a policy table. <xref target="RFC6724"/> defines a 
+default policy which produces certain behavior.  
+</t>
+
+<t> The rules in the two algorithms in <xref target="RFC6724"/> depend on many different properties of addresses.
+While these are needed for understanding how a host should choose addresses in an arbitary environment, most of 
+the rules are not relevant for understanding how a host should choose among mulitple source addresses when sending 
+a packet to a remote host. Returning to the example in <xref target="fig_isp_service"/>, we look 
+at what the default algorithms in <xref target="RFC6724"/> say about the source address that 
+internal host H31 should use to send traffic to external host H101, somewhere on the Internet.
+Let's look at what rules in <xref target="RFC6724"/> are actually used by H31 in this case.
+</t>
+
+<t> There is no choice to be made with respect to destination address.
+H31 needs to send a packet with D=2001:db8:0:1234::101 in order to reach H101.    
+So H31 have to choose between using S=2001:db8:0:a010::31 or S=2001:db8:0:b010::31 as the source 
+address for this packet.  We go through the rules for source address selection in 
+Section 5 of <xref target="RFC6724"/>.  Rule 1 (Prefer same address) is not useful 
+to break the tie between source addresses,
+because neither the candidate source addresses equals the destination address.
+Rule 2 (Prefer appropriate scope) is also not useed,  because both source addresses and the
+destination address all have global scope.  
+</t>
+
+<t>
+Rule 3 (Avoid deprecated addresses) may be useful.  This 
+</t>
+
+</section>
+
+
+
 
 <section anchor="sec_DHCPv6" title="DHCPv6">
 <t> 

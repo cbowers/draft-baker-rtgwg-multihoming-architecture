@@ -1178,14 +1178,31 @@ the router that it uses as its first hop to reach a particular destination prefi
 </t>
 
 <t> As currently standardized, neither PIO nor RIO options contained in Neigbor Discovery
-Router Advertisements can provide help address 
+Router Advertisements can communicate the information needed to implement the desired
+routing policy.  PIO's communicate source prefixes, and RIO communicate destination prefixes.
+However, there is currently no standardized way to associate a particular destination prefix
+with a particular source prefix.  
+</t>
 
-
+<t> <xref target="I-D.pfister-6man-sadr-ra"/> 
+proposes a Source Address Dependent Route Information option for 
+Neighbor Discovery Router Advertisements which would associate a source 
+prefix and with a destination prefix.  The details of 
+<xref target="I-D.pfister-6man-sadr-ra"/> might need tweaking to address 
+this use case.  However, in order to be able to use Neighbor Discovery 
+Router Advertisements to implement this routing policy, an extension that
+allows a R1 and R2 to explicitly communicate to H31 an association between 
+S=2001:db8:0:a000::/52 D=2001:db8:0:1234::/64 would be needed.
 </t>
 
 </section>
 
+<section anchor="sec_both_working_icmpv6" title="Controlling Source Address Selection With ICMPv6">
+<t> 
+ 
+</t>
 
+</section>
 
 </section>
 
@@ -1476,8 +1493,11 @@ considered a viable option to enable PA multihoming for enterprises.
     </section>
 
     <section anchor="Acknowledgements" title="Acknowledgements">
-      <t>The original outline was suggested by Ole Troan.  Many of the ideas 
-	  in this draft were described in <xref target="I-D.huitema-shim6-ingress-filtering"/> . </t>
+      <t>The original outline was suggested by Ole Troan.  
+	  <xref target="I-D.huitema-shim6-ingress-filtering"/> discussed the idea
+	  using a connected domain of SADR-capable routers, instead of requiring that
+	  ever router in the IGP be capable of SADR.
+  	  </t>
     </section>
   </middle>
 
@@ -1505,6 +1525,8 @@ considered a viable option to enable PA multihoming for enterprises.
 
 <?rfc include="reference.RFC.4116" ?>
 
+<?rfc include="reference.RFC.4191" ?>
+
       <?rfc include="reference.RFC.4218" ?>
 
       <?rfc include="reference.RFC.4219" ?>
@@ -1513,9 +1535,11 @@ considered a viable option to enable PA multihoming for enterprises.
     </references>
 
     <references title="Informative References">
-	
+
+      <?rfc include="reference.I-D.pfister-6man-sadr-ra" ?>
+
       <?rfc include="reference.I-D.huitema-shim6-ingress-filtering" ?>
-	  
+
       <?rfc include="reference.I-D.baker-ipv6-isis-dst-src-routing" ?>
 
       <?rfc include="reference.I-D.baker-rtgwg-src-dst-routing-use-cases" ?>

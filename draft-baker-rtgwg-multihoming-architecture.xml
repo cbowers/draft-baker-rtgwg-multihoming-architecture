@@ -949,15 +949,7 @@ to choose the correct source address.  We also look at what role, if any, the ro
 in providing information that helps hosts to choose source addresses.  
 </t>
 
-<t> Until this point, we have made the assumption that hosts are able to choose the correct 
-source address using some unspecified mechanism.  This has allowed us to just focus on 
-what the routers in a multihomed site network need to do in order to forward packets 
-to the correct ISP based on source address.  Now we look at possible mechanisms for hosts 
-to choose the correct source address.  We also look at what role, if any, the routers may play 
-in providing information that helps hosts to choose source addresses.  
-</t>
-
-<t> Any host that needs to be able to communicate using the uplinks to a given ISP is expected to be
+<t> Any host that needs to be able to send traffic using the uplinks to a given ISP is expected to be
 configured with an address from the prefix assigned by that ISP.  The host will 
 control which ISP is used for its traffic by selecting one of the addresses configured on 
 the host as the source address for outgoing traffic.  It is the responsibility of the site
@@ -991,8 +983,9 @@ address in the received packet as the source address of the transmitted packet.
 
 <section anchor="sec_sessions_from_internal_hosts" title="Sessions initiated from internal hosts">
 <t> For a session originated by a host internal to the multi-homed site, the decision of what source 
-address to select is more complicated.  There are three main ways for hosts to get information about the 
-network:  Neighbor Discovery Router Advertisements (RAs), DHCPv6, and ICMPv6.  Note that we are explicitly
+address to select is more complicated. We consider three main methods for hosts to get information about the 
+network.  The two proactive methods are Neighbor Discovery Router Advertisements and DHCPv6.  The one 
+reactive method we consider is ICMPv6.  Note that we are explicitly
 excluding the possibility of having hosts participate in or even listen directly
 to routing protocol advertisements.
 </t>
@@ -1129,8 +1122,8 @@ failed.
 <section anchor="sec_both_uplinks_working" title="Selecting Source Address When Both Uplinks Are Working">
 <t> Again we return to the topology in <xref target="fig_isp_service"/>. 
 Suppose that that site admininistrator wants to implement a policy by 
-which all hosts need to use ISP-A to reach H01 at D=2001:db8:0:1234::/64.  So for example,
-H31 needs to select S=2001:db8:0:a010::31.
+which all hosts need to use ISP-A to reach H01 at D=2001:db8:0:1234::101.
+So for example, H31 needs to select S=2001:db8:0:a010::31.
 </t>
 
 <section anchor="sec_both_working_dhcpv6" title="Distributing address selection policy table with DHCPv6">
@@ -1198,19 +1191,126 @@ S=2001:db8:0:a000::/52 D=2001:db8:0:1234::/64 would be needed.
 </section>
 
 <section anchor="sec_both_working_icmpv6" title="Controlling Source Address Selection With ICMPv6">
-<t> 
- 
+<t> We now dicuss how one might use ICMPv6 to implement the routing policy to 
+send traffic destined for H101 out the uplink to ISP-A, even when uplinks to both 
+ISPs are working.  If H31 started sending traffic to H101 with 
+S=2001:db8:0:b010::31 and D=2001:db8:0:1234::101, it would be routed through SER-b1 
+and out the uplink to ISP-B.  SERb1 could recognize that this is traffic 
+is not following the desired routing policy and react by sending an ICMPv6 message
+back to H31. 
 </t>
+
+<t> In this example, we could arrange things so that SERb1 drops the packet with 
+S=2001:db8:0:b010::31 and D=2001:db8:0:1234::101, and then sends to H31 an 
+ICMPv6 Destination Unreachable message with Code 5 (Source address failed ingress/egress policy).
+When H31 receives this packet, it would then be expected to try another source address to 
+reach the destination.  In this example, H31 would then send a packet with 
+S=2001:db8:0:a010::31 and D=2001:db8:0:1234::101, which will reach SERa and be
+forwarded out the uplink to ISP-A.  
+</t>
+
+<t> However, we would also want it to be the case that SERb1 does not enforce
+this routing policy when the uplink from SERa to ISP-A has failed.  This could 
+be accomplished by having SERa originate a source-prefix-scoped route for 
+(S=2001:db8:0:a000::/52, D=2001:db8:0:1234::/64) and have SERb1 monitor the
+presence of that route.  If that route is not present (becuase SERa has 
+stopped originating it), then SERb1 will
+not enforce the routing policy, and it will forward packets with 
+S=2001:db8:0:b010::31 and D=2001:db8:0:1234::101 out its uplink to ISP-B.  
+</t>
+
+<t> We can also use this source-prefix-scoped route originated by SERa to 
+communicate the desired routing policy to SERb1.  We can define 
+an EXCLUSIVE flag to be advertised together with the IGP route for
+(S=2001:db8:0:a000::/52, D=2001:db8:0:1234::/64).  This would allow SERa 
+to communicate to SERb that SERb should reject traffic for  
+D=2001:db8:0:1234::/64 and respond with an ICMPv6 Destination Unreachable 
+Code 5 message, as long as the route
+for (S=2001:db8:0:a000::/52, D=2001:db8:0:1234::/64) is present.
+</t>
+
+<t> Finally, if we are willing to extend ICMPv6 to support this solution, then
+we could create a mechasism for SERb1 to tell the host what source address it 
+should be using to successfully forward packets that meet the policy.  
+In its current form, when SERb1 sends an ICMPv6 Destination Unreachable 
+Code 5 message, it is basically saying, "This source address is wrong.  Try another 
+source address."  It would be better is if the ICMPv6 message could say,
+"This source address is wrong.  Instead use a source address in S=2001:db8:0:a000::/52."
+</t>
+
+</section>
+
+<section anchor="sec_both_working_summary" title="Summary of methods for controlling source 
+address selection to implement routing policy">
+
+<t> So to summarize this section, we have looked at three methods for 
+implementing a simple routing policy where all traffic for a given 
+destination on the Internet needs to use a particular ISP, even when the 
+uplinks to both ISPs are working. 
+</t>
+
+<t>
+The default source address selection policy cannot distinguish between 
+the source addresses needed to enforce this policy, so a non-default 
+policy table using associating source and destination prefixes using 
+Label values would need to be installed on each host. A standards exists 
+for DHCPv6 to distribute a non-default policy table, but it is not clear 
+if they are widely implemented in host operating systems. 
+</t>
+
+<t>
+Currently standardized options in Neighbor Discovery Router Advertisements do not 
+allow particular source prefixes to be associated with particular 
+destination prefixes. If we wanted to use Router Advertisements to 
+enforce routing policy in multihomed networks, we would need 
+standardization of such an option, and host operating systems would need 
+to implement this.
+</t>
+
+
+<t> SERs can enforce the routing policy by sending ICMPv6 Destination 
+Unreachable messages with Code 5 (Source address failed ingress/egress 
+policy) for traffic that is being sent to the wrong ISP. The policy 
+distribution can be automated by defining an EXCLUSIVE flag for the 
+source-prefix-scoped route which can be set on the SER that originates 
+the route. 
+
+
+</t>
+
 
 </section>
 
 </section>
 
 <section anchor="sec_one_uplink_failed" title="Selecting Source Address When One Uplink Has Failed">
-<t> 
-
-
+<t> Now we look at how DHCPv6, Neighbor Discovery Router Advertisements, and ICMPv6 can 
+help a host choose the right source address when an uplink to one of the ISPs has failed.  Again 
+we look at the scenario in <xref target="fig_isp_service"/>.  This time we
+look at traffic from H31 destined for external host H501 at D=2001:db8:0:5678::501.  We 
+initially assume that the uplink from SERa to ISP-A is working and that
+the uplink from SERb1 to ISP-B is working.  
 </t>
+
+<t> We assume there is no 
+particular routing policy desired, so H31 is free to send packets with 
+S=2001:db8:0:a010::31 or S=2001:db8:0:b010::31 and have them 
+delivered to H501.  For this example, we assume that H31 has chosen 
+S=2001:db8:0:a010::31 so that the packets exit via SERa to ISP-A.  Now we 
+see what happens when the link from SERa to ISP-A fails. Clearly 
+H31 needs to start sending the packets with S=2001:db8:0:b010::31 in 
+order to start using the uplink to ISP-B.  How does H31 learn
+that it needs to do that?
+</t>
+
+<section anchor="sec_one_uplink_failed_dhcpv6" title="Controlling source address selection with DHCPv6">
+<t>  
+</t>
+
+</section>
+
+
+
 
 </section>
 

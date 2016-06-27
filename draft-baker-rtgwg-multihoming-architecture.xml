@@ -91,12 +91,30 @@
 
     <workgroup>Routing Working Group</workgroup>
 
-    <abstract>
-      <t>asdf s
-	  
-	  
-	  </t>
-    </abstract>
+<abstract>
+<t> Connecting an enterprise site to multiple ISPs using 
+provider-assigned addresses is difficult without the use of 
+some form of Network Address Translation (NAT).  Much has been written on this 
+topic over the last 10 to 15 years, but it still remains 
+a problem without a clearly defined or widely implemented solution.
+Any multihoming solution without NAT requires hosts at the site to have 
+addresses from each ISP and to select the egress ISP by selecting
+a source address for outgoing packets.  It also requires routers at the site
+to take into account those source addresses when forwarding packets 
+out towards the ISPs.
+</t>
+
+<t>This document attempts to define a complete
+solution to this problem.  It covers the behavior of routers to forward 
+traffic taking into account source address, and it covers the behavior
+of host to select appropriate source addresses.  It also covers any possible
+role that routers might play in providing information to hosts to help them
+select appropriate source addresses.  In the process of exploring 
+potential solutions, this documents also makes explicit requirements 
+for how the solution would be expected to behave from the 
+perspective of an enterprise site network administrator .  
+</t>
+</abstract>
 
   </front>
 
@@ -213,8 +231,8 @@ are expected to select source addresses dynamically based on network state.
 <section anchor="sec_enterprise_req" title="Enterprise Multihoming Requirements">
 
 
-<section anchor="sec_simple_scenario" title="Simple Multihoming Scenario">
-<t>We start by looking at a simple scenario where a site has connections to two ISPs,
+<section anchor="sec_simple_scenario" title="Simple ISP Connectivity with Connected SERs">
+<t>We start by looking at a scenario where a site has connections to two ISPs,
 as shown in <xref target="fig_simple_scenario"/>.
 The site is assigned the prefix 2001:db8:0:a000::/52 by ISP-A 
 and prefix 2001:db8:0:b000::/52 by ISP-B. 
@@ -229,7 +247,8 @@ assigned 2001:db8:0:a020::/64 and 2001:db8:0:b020::/64.
 
 
 
-<figure anchor="fig_simple_scenario" title="Simple multihoming scenario " align="center">
+<figure anchor="fig_simple_scenario" title="Simple ISP Connectivity 
+With Connected SERs" align="center">
 <artwork align="center"><![CDATA[
                                         2001:db8:0:a010::101   H101
                                                                  |
@@ -307,8 +326,8 @@ it to SERa first.
 
 </section>
 
-<section anchor="sec_simple_not_dir_conn" title="Simple multihoming scenario where
-SERs are not directly connected">
+<section anchor="sec_simple_not_dir_conn" title="Simple ISP Connectivity Where
+SERs Are Not Directly Connected">
 
 <t>In <xref target="fig_simple_not_dir_conn"/>, we modify the topology slightly 
 by inserting R7, so that SERa and SERb are no longer directly connected.  With
@@ -317,8 +336,8 @@ PA multi-homing.  There are two solutions to ways to enable PA multihoming in th
 topology.
 </t> 
 
-<figure anchor="fig_simple_not_dir_conn" title="Simple multihoming scenario where
-SERs are not directly connected " align="center">
+<figure anchor="fig_simple_not_dir_conn" title="Simple ISP Connectivity Where
+SERs Are Not Directly Connected" align="center">
 <artwork align="center"><![CDATA[
                                         2001:db8:0:1234::101    H101
                                                                  |
@@ -614,7 +633,7 @@ addresses have to be globablly unique.
 </t>
 </section>
 
-<section anchor="sec_simpler_topologies" title="Simpler topologies">
+<section anchor="sec_simpler_topologies" title="Simplified Topologies">
 <t> The topologies of many enterprise sites using this multihoming solution may 
 in practice be simpler than the examples that we have used. The topology
 in  <xref target="fig_simple_scenario"/> could be further simplified by having 
@@ -624,8 +643,17 @@ uplinks to ISP-A and ISP-B both connected to the same site exit router.
 However, it is the aim of this draft to provide a solution that applies to 
 a broad a range of enterprise site network topologies, so 
 this draft focuses on providing a solution to the more general case.
-The simplified cases will also be supported by this solution, but they 
-are not the primary target of this solution.
+The simplified cases will also be supported by this solution, and there
+may even be optimizations that can be made for simplified cases. This solution 
+however needs to support more complex topologies.
+</t>
+
+<t>
+We are starting with the basic assumption that enterprise site networks can be quite 
+complex from a routing perspective. However, even a complex site network 
+can be multihomed to different ISPs with PA addreses using IPv4 and NAT. 
+It is not reasonable to expect an enterprise network operator to change the 
+routing topology of the site in order to deploy IPv6.
 </t>
 </section>
 
@@ -916,7 +944,7 @@ Routes originated by R3:
 <xref target="fig_R5_forwarding_table"/>.
 </t> 
 
-<figure anchor="fig_R5_forwarding_table" title="Forwarding Table for R5, which doesn't 
+<figure anchor="fig_R5_forwarding_table" title="Forwarding Table For R5, Which Doesn't 
 Understand Source-Prefix-Scoped Routes"
  align="center">
 <artwork align="left"><![CDATA[
@@ -938,9 +966,18 @@ domain until it exits the site.  This property is required in order to guarantee
 there will not be routing loops involving SADR-capable and non-SADR-capable routers.
 </t> 
 
+<t> Note that the mechanism described here for converting source-prefix-scoped destination prefix routing
+advertisements into forwarding state is somewhat different from that proposed in
+<xref target="I-D.ietf-rtgwg-dst-src-routing"/>.  The method described in this document is
+intended to be easy to understand for network enterprise operators while at the same time 
+being functionally correct.  Another difference is that the method in this document 
+assumes that source prefix will not overlap.  Other differencse between the two approaches 
+still need to be understood and reconciled.
+</t> 
+
 </section>
 
-<section anchor="sec_host_mechanisms" title="Mechanisms for hosts to choose good source addresses in a multihomed site">
+<section anchor="sec_host_mechanisms" title="Mechanisms For Hosts To Choose Good Source Addresses In A Multihomed Site">
 <t> Until this point, we have made the assumption that hosts are able to choose the correct 
 source address using some unspecified mechanism.  This has allowed us to just focus on 
 what the routers in a multihomed site network need to do in order to forward packets 
@@ -980,8 +1017,6 @@ used by the internal host is simple.  The internal host has no choice but to use
 address in the received packet as the source address of the transmitted packet.   
 </t>
 
-
-<section anchor="sec_sessions_from_internal_hosts" title="Sessions initiated from internal hosts">
 <t> For a session originated by a host internal to the multi-homed site, the decision of what source 
 address to select is more complicated. We consider three main methods for hosts to get information about the 
 network.  The two proactive methods are Neighbor Discovery Router Advertisements and DHCPv6.  The one 
@@ -1126,7 +1161,7 @@ which all hosts need to use ISP-A to reach H01 at D=2001:db8:0:1234::101.
 So for example, H31 needs to select S=2001:db8:0:a010::31.
 </t>
 
-<section anchor="sec_both_working_dhcpv6" title="Distributing address selection policy table with DHCPv6">
+<section anchor="sec_both_working_dhcpv6" title="Distributing Address Selection Policy Table with DHCPv6">
 <t> This policy can be implemented by using DHCPv6 to distribute an address selection policy table 
 that assigns the same label to destination address that match 2001:db8:0:1234::/64 as it does to source 
 addresses that match 2001:db8:0:a000::/52.  The following two entries accomplish this.
@@ -1240,8 +1275,8 @@ source address."  It would be better is if the ICMPv6 message could say,
 
 </section>
 
-<section anchor="sec_both_working_summary" title="Summary of methods for controlling source 
-address selection to implement routing policy">
+<section anchor="sec_both_working_summary" title="Summary of Methods For Controlling Source 
+Address Selection To Implement Routing Policy">
 
 <t> So to summarize this section, we have looked at three methods for 
 implementing a simple routing policy where all traffic for a given 
@@ -1302,7 +1337,7 @@ in a way that doesn't prevent H31 from still sending packets with
 S=2001:db8:0:b010::31 in order to reach H61 at D=2001:db8:0:6666::61.  
 </t>
 
-<section anchor="sec_one_uplink_failed_dhcpv6" title="Controlling source address selection with DHCPv6">
+<section anchor="sec_one_uplink_failed_dhcpv6" title="Controlling Source Address Selection With DHCPv6">
 <t> For this 
 example we assume that the site network in <xref target="fig_isp_service"/> has
 a centralized DHCP server and all routers act as DHCP relay agents.  
@@ -1341,8 +1376,8 @@ failure of the uplink from SERb1, then the desired routing behavior should
 be acheived based on source and destination prefix being matched with label values.
 </t>
 
-<figure anchor="fig_policy_table_failed_uplink" title="Policy table needed 
-on failure of uplink from SERb1 " align="center">
+<figure anchor="fig_policy_table_failed_uplink" title="Policy Table Needed 
+On Failure Of Uplink From SERb1 " align="center">
 <artwork align="center"><![CDATA[
 Prefix                 Precedence       Label            
 ::/0                   50               44
@@ -1366,7 +1401,7 @@ Prefix                 Precedence       Label
 
 </section>
 
-<section anchor="sec_one_uplink_failed_ra" title="Controlling Source Address Selection with 
+<section anchor="sec_one_uplink_failed_ra" title="Controlling Source Address Selection With 
 Router Advertisements">
 <t> As noted in  <xref target="sec_both_working_ra"/>,
 there is currently no standardized way to associate a particular destination prefix
@@ -1388,7 +1423,7 @@ authentication.
 </t>
 </section>
 
-<section anchor="sec_one_uplink_failed_icmp" title="Controlling Source Address Selection with 
+<section anchor="sec_one_uplink_failed_icmp" title="Controlling Source Address Selection With 
 ICMPv6">
 <t> Now we look at how ICMPv6 messages can provide informatation back to H31.
 We assume again that at the time of the failure
@@ -1410,13 +1445,13 @@ SERa can even tell H31 what source address it should use to reach that destinati
 
 </section>
 
-<section anchor="sec_uplink_failed_summary" title="Summary of methods for controlling source 
-address selection on the failure of an uplink">
+<section anchor="sec_uplink_failed_summary" title="Summary Of Methods For Controlling Source 
+Address Selection On The Failure Of An Uplink">
 
 <t> Neither Neigbor Discovery Router Advertisements nor DHCPv6 is particularly well suited to 
 quickly changing the source address used by a host in the event of the failure of an uplink.  
 Both require the use of authentication to lessen the risk of denial-of-service attacks through this
-vector.  And neither is really designed with this dynamic use case in mind.
+vector.  And neither was really designed with this dynamic use case in mind.
 </t>
 
 <t> The use of ICMPv6 Destination Unreachable messages generated by the SER routers seem like they 
@@ -1436,6 +1471,31 @@ in evaluating this approach.
 
 </section>
 
+<section anchor="sec_shim6" title="Shim6">
+
+<t>The Shim6 working group specified the Shim6 protocol <xref target="RFC5533"/> 
+which allows a host at a multihomed
+site to communicate with an external host and exchange information about 
+possible source and destination address pairs that they can use to communicate.
+It also specified the REAP protocol <xref target="RFC5534"/> to 
+detect failures in the path between working address pairs and find
+new working address pairs.  A fundamental requirement for Shim6 is 
+that both internal and external hosts need to support Shim6.
+That is, both the host internal to the 
+multihomed site and the host external to the multihomed site need to 
+support Shim6 in order for there to be any benefit for the internal host
+to run Shim6.  The Shim6 protocol specification was published 
+in 2009, but it has not been implemented on widely used operating systems.  
+</t>
+  
+<t>We do not consider Shim6 to be a viable solution.  It suffers from the fact
+that it requires widespread deployment of Shim6 on hosts all over the Internet 
+before the host at a PA multihomed site sees significant benefit.  However, there
+appears to be no motivation for the vast majority of hosts on the 
+Internet (which are not at PA multihomed sites) to deploy Shim6.
+This may help explain why Shim6 has not been widely implemented.  
+</t>
+
 </section>
 
 
@@ -1446,7 +1506,7 @@ document. This document describes a solution where a host in a
 multihomed site determines which ISP a packet will be sent to based on 
 the source address it applies to the packet. This solution has many 
 moving parts. It requires 
-some routers in the enterprise site to support an as-yet-unspecified 
+some routers in the enterprise site to support some  
 form of Source Address Dependent Routing (SADR). It requires a host to 
 be able to learn when the uplink to an ISP fails so that it can stop 
 using the source address corresponding to that ISP. Ongoing work to 
@@ -1454,10 +1514,10 @@ create mechansisms to accomplish this are discussed in this document,
 but they are still a work in progress. 
 </t>
 
-<t> The requirements in this document aim at creating a PA multihoming 
+<t> This document attempts to create a PA multihoming 
 solution that is as easy as possible for an enterprise to deploy. However, 
 the success of this solution will depend greatly on whether or not the 
-as-yet-unspecified mechanisms for hosts to select source addresses based 
+ mechanisms for hosts to select source addresses based 
 on the state of ISP uplinks gets implemented across a wide range of 
 operating systems as the default mode of operation.
 Until that occurs, NPTv6 should still be 
@@ -1550,6 +1610,10 @@ considered a viable option to enable PA multihoming for enterprises.
       <?rfc include="reference.RFC.3736" ?>
 
       <?rfc include="reference.RFC.4861" ?>
+
+      <?rfc include="reference.RFC.5533" ?>
+
+      <?rfc include="reference.RFC.5534" ?>
 
       <?rfc include="reference.RFC.4862" ?>
 

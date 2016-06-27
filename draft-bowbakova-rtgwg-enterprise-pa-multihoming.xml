@@ -125,18 +125,20 @@ perspective of an enterprise site network administrator .
 
 <t>  Connecting an enterprise site to multiple ISPs is commonly
 used to provide redundant uplinks to different ISPs.  
-If the site uses provider-independent(PI) addresses, all traffic
+If the site uses provider-independent (PI) addresses, all traffic
 originating from the enterprise can use source addresses from the PI 
 address space.  Site multihoming with PI addresses is commonly used 
 with both IPv4 and IPv6, and does not present any new technical challenges.
 </t> 
 
-<t>  It may be desireable for an enterprise site to connect to multiple ISPs
-using provider-assigned(PA) addresses, instead of PI addresses.  Multihoming with 
+<t>  It may be desirable for an enterprise site to connect to multiple ISPs
+using provider-assigned (PA) addresses, instead of PI addresses.  Multihoming with 
 provider-assigned addresses is typically less expensive for the enterprise 
 relative to using provider-independent addresses.  PA multihoming is also 
 a practice that should be facilitated and encouraged because it does not 
 add to the size of the Internet routing table, whereas PI multihoming does.  
+Note that PA is also used to mean "provider-aggregatable".  In this document 
+we assume that provider-assigned addresses are always provider-aggregatable.  
 </t>
 
 <t> With PA multihoming,
@@ -1471,6 +1473,8 @@ in evaluating this approach.
 
 </section>
 
+<section anchor="sec_other_solutions" title="Other solutions">
+
 <section anchor="sec_shim6" title="Shim6">
 
 <t>The Shim6 working group specified the Shim6 protocol <xref target="RFC5533"/> 
@@ -1501,7 +1505,8 @@ This may help explain why Shim6 has not been widely implemented.
 
 <section anchor="sec_nptv6" title="IPv6-to-IPv6 Network Prefix Translation">
 
-<t>IPv6-to-IPv6 Network Prefix Translation is not the focus of this 
+<t>IPv6-to-IPv6 Network Prefix Translation (NPTv6) <xref target="RFC6296"/>
+is not the focus of this 
 document. This document describes a solution where a host in a 
 multihomed site determines which ISP a packet will be sent to based on 
 the source address it applies to the packet. This solution has many 
@@ -1525,7 +1530,8 @@ considered a viable option to enable PA multihoming for enterprises.
 </t>
 
 </section>
-	
+
+</section>
 
     <section anchor="IANA" title="IANA Considerations">
       <t>This memo asks the IANA for no new parameters.</t>

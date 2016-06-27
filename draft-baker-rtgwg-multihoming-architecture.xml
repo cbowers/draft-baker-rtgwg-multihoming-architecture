@@ -1132,7 +1132,7 @@ that assigns the same label to destination address that match 2001:db8:0:1234::/
 addresses that match 2001:db8:0:a000::/52.  The following two entries accomplish this.
 </t>
 
-<figure anchor="fig_policy_table" title="Policy table entries " align="center">
+<figure anchor="fig_policy_table" title="Policy table entries to implement a routing policy" align="center">
 <artwork align="center"><![CDATA[
 Prefix                 Precedence       Label            
 2001:db8:0:1234::/64   50               33
@@ -1274,8 +1274,6 @@ policy) for traffic that is being sent to the wrong ISP. The policy
 distribution can be automated by defining an EXCLUSIVE flag for the 
 source-prefix-scoped route which can be set on the SER that originates 
 the route. 
-
-
 </t>
 
 
@@ -1296,261 +1294,151 @@ the uplink from SERb1 to ISP-B is working.
 particular routing policy desired, so H31 is free to send packets with 
 S=2001:db8:0:a010::31 or S=2001:db8:0:b010::31 and have them 
 delivered to H501.  For this example, we assume that H31 has chosen 
-S=2001:db8:0:a010::31 so that the packets exit via SERa to ISP-A.  Now we 
-see what happens when the link from SERa to ISP-A fails. Clearly 
-H31 needs to start sending the packets with S=2001:db8:0:b010::31 in 
-order to start using the uplink to ISP-B.  How does H31 learn
-that it needs to do that?
+S=2001:db8:0:b010::31 so that the packets exit via SERb to ISP-B.  Now we 
+see what happens when the link from SERb1 to ISP-B fails.  How should H31 learn
+that it needs to start sending the packet to H501 with S=2001:db8:0:a010::31 in 
+order to start using the uplink to ISP-A?  We need to do this 
+in a way that doesn't prevent H31 from still sending packets with
+S=2001:db8:0:b010::31 in order to reach H61 at D=2001:db8:0:6666::61.  
 </t>
 
 <section anchor="sec_one_uplink_failed_dhcpv6" title="Controlling source address selection with DHCPv6">
-<t>  
+<t> For this 
+example we assume that the site network in <xref target="fig_isp_service"/> has
+a centralized DHCP server and all routers act as DHCP relay agents.  
+We assume that both of the addresses assigned to H31 were assigned via DHCP.
+</t>
+<t>  We could try to have the DHCP server monitor the state of the uplink 
+from SERb1 to ISP-B in some manner and then tell H31 that it can no longer
+use S=2001:db8:0:b010::31 by settings its valid lifetime 
+to zero. The DHCP server could initiate this process by sending a 
+Reconfigure Message to H31 as described in Section 19 of <xref target="RFC3315"/>.  
+Or the DHCP server can assign addresses with short lifetimes in
+order to force clients to renew them often. 
+</t>
+
+<t>  This approach would prevent H31 from using S=2001:db8:0:b010::31 to reach 
+the a host on the internet.  However, it would also prevent H31 from using 
+S=2001:db8:0:b010::31 to reach H61 at D=2001:db8:0:6666::61, which is not desirable.
+</t>
+
+<t>  Another potential approach is to have have the DHCP server 
+monitor the uplink from SERb1 to ISP-B and and control the choice of 
+source address on H31 by updating its 
+address selection policy table via the mechanism in <xref target="RFC7078"/>.
+The DHCP server could initiate
+this process by sending a Reconfigure Message to H31.
+Note that <xref target="RFC3315"/> requires that Reconfigure Message use DHCP
+authentication.  DHCP authentication could be avoided by using
+short address lifetimes to force clients to 
+send Renew messages to the server often. If the host is not obtaining its
+IP addresses from the DHCP server, then it would need to use the Information Refresh Time
+option defined in <xref target="RFC4242"/>.
+</t>
+
+<t> If the following policy table can be installed on H31 after the 
+failure of the uplink from SERb1, then the desired routing behavior should 
+be acheived based on source and destination prefix being matched with label values.
+</t>
+
+<figure anchor="fig_policy_table_failed_uplink" title="Policy table needed 
+on failure of uplink from SERb1 " align="center">
+<artwork align="center"><![CDATA[
+Prefix                 Precedence       Label            
+::/0                   50               44
+2001:db8:0:a000::/52   50               44
+2001:db8:0:6666::/64   50               55
+2001:db8:0:b000::/52   50               55
+
+]]></artwork>
+</figure>
+
+<t>  As mentioned before, it does not appear that <xref target="RFC7078"/>
+ has been widely implemented on host operating systems.  In addition, 
+ <xref target="RFC7078"/> does not clearly specify this kind of a dynamic 
+ use case where address selection policy needs to be updated quickly in
+ response to the failure of a link.
+ If we were to rely on this mechanism as an integral
+ part of this multihoming solution, <xref target="RFC7078"/> should be
+ updated to more clearly specify the expected behavior in the failure
+ scenario discussed above.
 </t>
 
 </section>
 
+<section anchor="sec_one_uplink_failed_ra" title="Controlling Source Address Selection with 
+Router Advertisements">
+<t> As noted in  <xref target="sec_both_working_ra"/>,
+there is currently no standardized way to associate a particular destination prefix
+with a particular source prefix in a Neighbor Discovery Router Advertisement.  Therefore, 
+we can't currently send an RA message to selectively disable the use of S=2001:db8:0:b010::/64
+on packets to all destination addresses, except for packets sent to D=2001:db8:0:6666::/64.  
+This could be remedied with a proposal along the lines of <xref target="I-D.pfister-6man-sadr-ra"/>. 
+</t>
 
-
-
+<t> However, Stateless Address Autoconfiguration presents another difficulty for using
+Router Advertisements to rapidly invalidate a prefix in response to the failure
+of an uplink.  In particular, section 5.3.3 
+of <xref target="RFC4862"/> prevents a host from setting the valid lifetime of a prefix 
+to a value less than 2 hours based on Prefix Information option received in an RA, unless the 
+RA has been authenticated, for example using Secure Neighbor Discovery. 
+ The goal is to prevent denial-of-service attacks.  Similar logic 
+would apply to a new RA option that associates source and destination prefixes and require 
+authentication.
+</t>
 </section>
 
-<section anchor="sec_placeholder1" title="DHCPv6">
-<t> 
-<xref target="RFC6724"/> defines a policy framework to allow a host to select both 
-source addresses and destination addresses.  
-
-Section 2.1 of <xref target="RFC6724"/> defines a default address selection policy that operates within this framework.
-, 
-the current default address selection policy for IPv6. It uses properties of
-the addresses themselves such as scope (link-local, global, etc.) and whether or not the address
-is . 
-
- As section points out that
-this default policy fa
-
-
-<xref target="RFC6724"/> relies on address 
-
+<section anchor="sec_one_uplink_failed_icmp" title="Controlling Source Address Selection with 
+ICMPv6">
+<t> Now we look at how ICMPv6 messages can provide informatation back to H31.
+We assume again that at the time of the failure
+H31 is sending packets to H501 using (S=2001:db8:0:b010::31, D=2001:db8:0:5678::501).
+When the uplink from SERb1 to ISP-B fails, SERb1 would 
+stop originating its source-prefix-scoped route for the default destination 
+(S=2001:db8:0:b000::/52, D=::/0) as well as its unscoped 
+default destination route. With these routes no longer in the IGP, traffic with 
+(S=2001:db8:0:b010::31, D=2001:db8:0:5678::501) would end up at SERa based on the 
+unscope default destination route being originated by SERa.  Since that traffic
+has the wrong source address to be forwarded to ISP-A, SERa would drop it and send a 
+Destination Unreachable message with Code 5 (Source address failed ingress/egress policy) 
+back to H31.  H31 would then know to use another source address for that destination and would  
+try with (S=2001:db8:0:a010::31, D=2001:db8:0:5678::501).  This would be forwarded to
+SERa based on the source-prefix-scoped default destination route still being originated 
+by SERa, and SERa would forward it to ISP-A.  As discussed above, if we are willing to extend ICMPv6,
+SERa can even tell H31 what source address it should use to reach that destination.
 </t>
 
 </section>
 
-</section>
+<section anchor="sec_uplink_failed_summary" title="Summary of methods for controlling source 
+address selection on the failure of an uplink">
 
-<section anchor="sec_ND_RA" title="Hosts learn information about the network via Neighbor Discovery Router Advertisements">
-<t> 
-
-</t>
-</section>
-
-<section anchor="sec_DHCPv6" title="Hosts may learn information about the network via DHCPv6">
-<t> 
-
-</t>
-</section>
-
-
-</section>
-
-
-<section anchor="sec_routing_protocol_expectations" title="What we expect the routing protocol to provide">
-<t> 
-
+<t> Neither Neigbor Discovery Router Advertisements nor DHCPv6 is particularly well suited to 
+quickly changing the source address used by a host in the event of the failure of an uplink.  
+Both require the use of authentication to lessen the risk of denial-of-service attacks through this
+vector.  And neither is really designed with this dynamic use case in mind.
 </t>
 
-<section anchor="sec_primary_goal" title="Primary goal: Make sure that packets are always 
-delivered to the correct site exit router">
-<t> 
-Packet should be routed with the following criteria:
-
-1) Forwarding is loop-free
-2) Packets are delivered to site exit router whose uplink will accept packets with that source address.
-
-
+<t> The use of ICMPv6 Destination Unreachable messages generated by the SER routers seem like they 
+have the potential to provide a solution that works independent of the particulars of the address 
+configuration method. 
 </t>
-</section>
 
-<section anchor="sec_secondary_goal" title="Secondary goal: Provide information to routers adjacent to hosts that
-can be converted to ND Router Advertisements  which in turn assist the host with source address selection ">
-<t> 
-
+<t> The current behavior of different host operating system when receiving 
+ICMPv6 Destination Unreachable message with code 5 
+(Source address failed ingress/egress policy) is not clear to the authors.
+Information from implementers, users, and testing would be quite helpful 
+in evaluating this approach. 
 </t>
 </section>
 
 </section>
 
-
-<section anchor="sec_asfdadf" title="Two pass route lookup model ">
-<t> 
-Each router maintains a destination-based route table for 
-</t>
 </section>
 
-    <section anchor="L3" title="Internet layer (IPv6)">
-      <t/>
+</section>
 
-      <section anchor="L3-sadr" title="SADR forwarding (router)">
-        <t>A SADR Router is a router that makes routing and forwarding
-        decisions based on both the source and destination addresses in an IP
-        packet.</t>
 
-        <t>There are at least three ways one could build the forwarding plane:
-        use the source address to select a destination Forwarding Information
-        Base (FIB), use the destination address to select a source address FIB
-        or filter, or use the two as a combined key in the same mechanism to
-        find a source/destination prefix pair in the FIB.</t>
-
-        <t>The first two are well understood; follow a longest-match-first
-        rule on the source or destination address in a radix tree or other
-        type of database, and do so again with the other address.</t>
-
-        <t>Algorithms exist for the third, such as <xref target="PATRICIA"/>;
-        a potentially discontiguous bit pattern (the source and destination
-        address) is analyzed to determine what bits are most important at any
-        given stage in the lookup, and the lookup trie is organized
-        accordingly. TCAMs, of course, look at the entire lookup key
-        simultaneously, and are therefore another solution to the third case.
-        The counterpart to "longest match first" in such an algorithm is "most
-        specific match first".</t>
-
-        <t>An important use case (<xref
-        target="I-D.baker-rtgwg-src-dst-routing-use-cases"/>) for
-        source/destination routing is in egress routing. Egress routing is
-        essentially an enterprise or campus technology that presumes several
-        default routes in the network associated with the various prefixes in
-        use, and follows the default route for the relevant source prefix to
-        an egress to an upstream network. In that formulation, it is a
-        degenerate algorithm, perhaps best described as "source-specific"
-        routing, as the actual destination (as long is it is not local, which
-        would match a more specific route) is irrelevant - much as the source
-        address is irrelevant in traditional destination routing.</t>
-
-        <t>Other use cases, of which there are several, provide for the
-        possibility of following one of several paths to the same destination
-        based on the source prefix selected. That can be implemented as a set
-        of default routes with additional more-specific routes.</t>
-      </section>
-
-      <section anchor="L3-addressing"
-               title="Intelligent source address selection for a given destination">
-        <t>Source address selection in IPv6 has been a challenge. The biggest
-        single part of the challenge is that the host has no real
-        understanding of the network it finds itself in; at best, it might
-        know important parts of recent path state, or what has historically
-        worked and some measurements of how well. Unless the host has
-        configuration, history, or clairvoyance, it has no provably correct
-        mechanism with which to make a selection.</t>
-
-        <t>Existing RFCs on the topic, notably <xref target="RFC6724"/>, seek
-        to avoid address formats that have undesirable characteristics, such
-        as indicating the use of network address translation when an
-        untranslated path is available, using technologies that have not
-        worked well in the Internet, or using technologies that are
-        politically incorrect. Having eschewed the obviously bad choices, they
-        then recommend using the source address most similar to the
-        destination, on the premise that this should minimize path length. The
-        advice is probably generally good, but may also be suboptimal in
-        individual cases.</t>
-      </section>
-
-      <section anchor="L3-host-ICMP"
-               title="Reacting to timeouts and ICMP messages">
-        <t>When a packet does something other than follow the most obvious
-        path to its destination and arrive, the Internet Architecture
-        generally expects the router or middleware discarding it to inform the
-        sender why not. It does so using the <xref target="RFC4443">Internet
-        Control Message Protocol</xref>.</t>
-
-        <t>There are a number of cases in which that general dictum is not
-        followed; link layer corruption may make the packet unintelligible, so
-        that no system actually receives it to choose to drop it, the system
-        dropping the packet may be configured to not send, or to rate limit
-        the rate at which it sends, ICMP messages, and a filter en route may
-        prevent the ICMP message from arriving. In such cases, the sender is
-        left to intuit the failure from a timeout and take such corrective
-        action as may be required.</t>
-
-        <t>In a network with one prefix, the recovery action is simple: either
-        retransmit, or inform the application that the session failed.</t>
-
-        <t>In a network with more than one prefix (which might mean "has both
-        an IPv4 and an IPv6 prefix", "has IPv4 or IPv6 prefixes on different
-        interfaces", or "has more than one prefix, IPv4 or IPv6, on the same
-        interface"), one alternative to simple retransmission using the same
-        source address is to retransmit using a different source address.
-        <xref target="RFC6555">Happy Eyeballs</xref> provides a relatively
-        sophisticated way to accomplish that; in the simplest case, the socket
-        API can simply select a different one.</t>
-      </section>
-
-      <section anchor="L3-host-Next-Hop"
-               title="Intelligent first-hop selection (host)">
-        <t><xref target="I-D.ietf-6man-multi-homed-host"/> addresses the
-        question of first hop selection by a host. This is a routing question
-        being answered by a system that in the general case has little
-        knowledge of network routing. However, it does know what addresses it
-        is using, on what interfaces, and how it obtained them. In a network
-        using DHCP/DHCPv6, it knows that it can use as its first hop router a
-        router on the interface the source address is associated with, which
-        it learns by observing Router Advertisements, and it may have been
-        given an ICMP Redirect to a different router. In a network using <xref
-        target="RFC4862">IPv6 Stateless Address Autoconfiguration</xref> (in
-        any of its variants), it knows what router advertised the prefix to
-        it, and can use that as a first hop router.</t>
-      </section>
-
-      <section anchor="L3-ephemeral-addresses"
-               title="Deal with addresses being ephemeral, interface state and interfaces appearing / disappearing">
-        <t/>
-      </section>
-    </section>
-
-    <section anchor="Routing" title="Routing layer">
-      <t/>
-
-      <section anchor="Routing-Protocol"
-               title="Routing protocol for source/destination routing">
-        <t>A Source/Destination routing protocol is a protocol that exchanges
-        the information necessary for the calculation of a SADR FIB, and then
-        calculates it. No currently-deployed protocol implements SADR routing
-        at this point, although there are experiments in progress. <xref
-        target="I-D.baker-ipv6-isis-dst-src-routing">IPv6 Source/Destination
-        Routing using IS-IS</xref>, <xref
-        target="I-D.xu-src-dst-bgp">Source/Destination Routing Using
-        BGP-4</xref>, <xref
-        target="I-D.boutier-babel-source-specific">Source-Specific Routing in
-        Babel</xref>, and <xref target="RFC7788">Home Networking Control
-        Protocol</xref> are examples of source/destination routing
-        protocols.</t>
-      </section>
-    </section>
-
-    <section anchor="L4" title="Transport layer">
-      <t/>
-
-      <section anchor="L4-path-fail" title="Handle failure in one path">
-        <t/>
-      </section>
-
-      <section anchor="L4-load-share" title="Share load across multiple paths">
-        <t/>
-      </section>
-
-      <section anchor="L4-path-restore"
-               title="Bring up path again after failure">
-        <t/>
-      </section>
-    </section>
-
-    <section anchor="L5" title="Session layer">
-      <t/>
-
-      <section anchor="L5-session"
-               title="Recover session e.g. moving from home to office">
-        <t/>
-      </section>
-    </section>
-	
 <section anchor="sec_nptv6" title="IPv6-to-IPv6 Network Prefix Translation">
 
 <t>IPv6-to-IPv6 Network Prefix Translation is not the focus of this 
@@ -1593,10 +1481,7 @@ considered a viable option to enable PA multihoming for enterprises.
     </section>
 
     <section anchor="Acknowledgements" title="Acknowledgements">
-      <t>The original outline was suggested by Ole Troan.  
-	  <xref target="I-D.huitema-shim6-ingress-filtering"/> discussed the idea
-	  using a connected domain of SADR-capable routers, instead of requiring that
-	  ever router in the IGP be capable of SADR.
+      <t>The original outline was suggested by Ole Troan. 
   	  </t>
     </section>
   </middle>
@@ -1621,11 +1506,15 @@ considered a viable option to enable PA multihoming for enterprises.
 
 <?rfc include="reference.RFC.2460"?>
 
+<?rfc include="reference.RFC.3315" ?>
+
 <?rfc include="reference.RFC.3582" ?>
 
 <?rfc include="reference.RFC.4116" ?>
 
 <?rfc include="reference.RFC.4191" ?>
+
+<?rfc include="reference.RFC.4242" ?>
 
       <?rfc include="reference.RFC.4218" ?>
 
